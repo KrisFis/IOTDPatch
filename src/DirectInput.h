@@ -11,10 +11,15 @@
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 
-#define GENERATE_UNKNOWN_PROXY_BODY(Class, Base)\
+#define GENERATE_COM_PROXY_BASE_BODY(Class, Base)\
 	public:\
+	Class() = delete;\
 	Class(Base* impl) : _impl(impl) { _impl->AddRef(); }\
 	virtual ~Class() { _impl->Release(); }\
+	Class(const Class& other) { _impl = other._impl; _impl->AddRef(); }\
+	Class& operator=(const Class& other) { _impl = other._impl; _impl->AddRef(); return *this; }\
+	Class(Class&&) = default;\
+	Class& operator=(Class&&) = default;\
 	__forceinline Base* GetImpl() const { return _impl; }\
 	__forceinline STDOVERRIDEMETHODIMP QueryInterface(REFIID riid, LPVOID* ppvObj) { return _impl->QueryInterface(riid, ppvObj); } \
 	__forceinline STDOVERRIDEMETHODIMP_(ULONG) AddRef() { return _impl->AddRef(); } \
@@ -26,7 +31,7 @@
 // manage device state, acquire/release input, and handle force feedback.
 class CDirectInputDevice8Proxy : public IDirectInputDevice8
 {
-	GENERATE_UNKNOWN_PROXY_BODY(CDirectInputDevice8Proxy, IDirectInputDevice8)
+	GENERATE_COM_PROXY_BASE_BODY(CDirectInputDevice8Proxy, IDirectInputDevice8)
 
 public:
 	// @brief Retrieves device capabilities.
@@ -328,7 +333,7 @@ public:
 // managing device configurations, and querying device status.
 class CDirectInput8Proxy : public IDirectInput8
 {
-	GENERATE_UNKNOWN_PROXY_BODY(CDirectInput8Proxy, IDirectInput8)
+	GENERATE_COM_PROXY_BASE_BODY(CDirectInput8Proxy, IDirectInput8)
 
 public:
 	// @brief Creates a DirectInput device instance.

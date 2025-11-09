@@ -70,7 +70,7 @@ std::wstring ToWChar(const char* str)
 
 namespace _NProgram
 {
-	bool GShutdownRequested = false;
+	std::atomic GShutdownRequested = false;
 
 	bool Init()
 	{
@@ -84,7 +84,7 @@ namespace _NProgram
 			extension->Initialize();
 		}
 
-		return EXIT_SUCCESS;
+		return true;
 	}
 
 	void Shutdown()
@@ -130,13 +130,12 @@ namespace NProgram
 
 	void RequestShutdown(const SString& reason)
 	{
-		if (!CHECK(!GShutdownRequested)) return;
-		GShutdownRequested = true;
+		GShutdownRequested.store(true);
 	}
 
 	int32 Main()
 	{
-		if (const bool initResult = Init(); initResult != EXIT_SUCCESS)
+		if (const bool initResult = Init(); !initResult)
 		{
 			Shutdown();
 			return initResult;
@@ -146,7 +145,7 @@ namespace NProgram
 		constexpr std::chrono::duration<double> TICKS_DURATION(1.0 / TICKS_PER_SECOND);
 
 		auto previous = std::chrono::steady_clock::now();
-		while (!GShutdownRequested)
+		while (!GShutdownRequested.load())
 		{
 			auto loopStart = std::chrono::steady_clock::now();
 

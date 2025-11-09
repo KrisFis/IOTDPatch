@@ -51,7 +51,7 @@ public:
 	// @param pvRef User-defined pointer passed to the callback.
 	// @param dwFlags Enumeration flags (e.g., DIDFT_ALL).
 	// @return S_OK on success, or DIERR_INVALIDPARAM on error.
-	__forceinline STDOVERRIDEMETHODIMP EnumObjects(LPDIENUMDEVICEOBJECTSCALLBACKA lpCallback, LPVOID pvRef, DWORD dwFlags)
+	__forceinline STDOVERRIDEMETHODIMP EnumObjects(LPDIENUMDEVICEOBJECTSCALLBACK lpCallback, LPVOID pvRef, DWORD dwFlags)
 	{
 		return _impl->EnumObjects(lpCallback, pvRef, dwFlags);
 	}
@@ -149,7 +149,7 @@ public:
 	// @param dwObj Index or identifier of the object.
 	// @param dwHow How to interpret dwObj (by offset, by ID, etc.).
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
-	__forceinline STDOVERRIDEMETHODIMP GetObjectInfo(LPDIDEVICEOBJECTINSTANCEA pdidoi, DWORD dwObj, DWORD dwHow)
+	__forceinline STDOVERRIDEMETHODIMP GetObjectInfo(LPDIDEVICEOBJECTINSTANCE pdidoi, DWORD dwObj, DWORD dwHow)
 	{
 		return _impl->GetObjectInfo(pdidoi, dwObj, dwHow);
 	}
@@ -158,7 +158,7 @@ public:
 	// 
 	// @param pdidi Receives device instance information.
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
-	__forceinline STDOVERRIDEMETHODIMP GetDeviceInfo(LPDIDEVICEINSTANCEA pdidi)
+	__forceinline STDOVERRIDEMETHODIMP GetDeviceInfo(LPDIDEVICEINSTANCE pdidi)
 	{
 		return _impl->GetDeviceInfo(pdidi);
 	}
@@ -191,7 +191,7 @@ public:
 	// @param ppdeff Receives the created IDirectInputEffect interface.
 	// @param pUnkOuter Optional COM aggregation pointer (usually nullptr).
 	// @return S_OK on success, DIERR_INVALIDPARAM if unsupported.
-	__forceinline STDOVERRIDEMETHODIMP CreateEffect(REFGUID rguid, LPCDIEFFECT lpeff, LPDIRECTINPUTEFFECT *ppdeff, LPUNKNOWN pUnkOuter)
+	__forceinline STDOVERRIDEMETHODIMP CreateEffect(REFGUID rguid, LPCDIEFFECT lpeff, LPDIRECTINPUTEFFECT* ppdeff, LPUNKNOWN pUnkOuter)
 	{
 		return _impl->CreateEffect(rguid, lpeff, ppdeff, pUnkOuter);
 	}
@@ -202,7 +202,7 @@ public:
 	// @param pvRef User-defined pointer passed to the callback.
 	// @param dwFlags Enumeration flags.
 	// @return S_OK on success, DIERR_UNSUPPORTED if device does not support force feedback.
-	__forceinline STDOVERRIDEMETHODIMP EnumEffects(LPDIENUMEFFECTSCALLBACKA lpCallback, LPVOID pvRef, DWORD dwFlags)
+	__forceinline STDOVERRIDEMETHODIMP EnumEffects(LPDIENUMEFFECTSCALLBACK lpCallback, LPVOID pvRef, DWORD dwFlags)
 	{
 		return _impl->EnumEffects(lpCallback, pvRef, dwFlags);
 	}
@@ -212,7 +212,7 @@ public:
 	// @param peffinfo Receives effect information.
 	// @param rguid GUID of the effect to query.
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
-	__forceinline STDOVERRIDEMETHODIMP GetEffectInfo(LPDIEFFECTINFOA peffinfo, REFGUID rguid)
+	__forceinline STDOVERRIDEMETHODIMP GetEffectInfo(LPDIEFFECTINFO peffinfo, REFGUID rguid)
 	{
 		return _impl->GetEffectInfo(peffinfo, rguid);
 	}
@@ -305,7 +305,7 @@ public:
 	// @param lpszUserName Name of the user for mapping.
 	// @param dwFlags Flags controlling mapping.
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
-	__forceinline STDOVERRIDEMETHODIMP BuildActionMap(LPDIACTIONFORMATA lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
+	__forceinline STDOVERRIDEMETHODIMP BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
 	{
 		return _impl->BuildActionMap(lpActionFormat, lpszUserName, dwFlags);
 	}
@@ -316,7 +316,7 @@ public:
 	// @param lpszUserName Name of the user for mapping.
 	// @param dwFlags Flags controlling mapping.
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
-	__forceinline STDOVERRIDEMETHODIMP SetActionMap(LPDIACTIONFORMATA lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
+	__forceinline STDOVERRIDEMETHODIMP SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
 	{
 		return _impl->SetActionMap(lpActionFormat, lpszUserName, dwFlags);
 	}

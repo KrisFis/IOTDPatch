@@ -5,14 +5,19 @@
 #include "ProgramExtension.h"
 #include "DirectInput.h"
 
-class CInputDevicePatched : public CDirectInputDevice8Proxy
+class CInputDevicePatched final : public CDirectInputDevice8Proxy
 {
 public:
 	typedef CDirectInputDevice8Proxy Super;
 	using Super::Super;
+
+	STDOVERRIDEMETHODIMP GetDeviceState(DWORD cbData, LPVOID lpvData);
+	STDOVERRIDEMETHODIMP GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags);
+	STDOVERRIDEMETHODIMP BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags);
+	STDOVERRIDEMETHODIMP SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags);
 };
 
-class CInputPatched : public CDirectInput8Proxy
+class CInputPatched final : public CDirectInput8Proxy
 {
 public:
 	typedef CDirectInput8Proxy Super;
@@ -20,11 +25,10 @@ public:
 
 	STDOVERRIDEMETHODIMP CreateDevice(REFGUID rguid, LPDIRECTINPUTDEVICE8* lplpDirectInputDevice, LPUNKNOWN pUnkOuter);
 	STDOVERRIDEMETHODIMP EnumDevices(DWORD dwDevType, LPDIENUMDEVICESCALLBACK lpCallback, LPVOID pvRef, DWORD dwFlags);
-	STDOVERRIDEMETHODIMP GetDeviceStatus(REFGUID rguidInstance);
-	STDOVERRIDEMETHODIMP FindDevice(REFGUID rguidClass, LPCSTR pszName, LPGUID pguidInstance);
+	STDOVERRIDEMETHODIMP EnumDevicesBySemantics(LPCSTR pszUserName, LPDIACTIONFORMAT lpActionFormat, LPDIENUMDEVICESBYSEMANTICSCB lpCallback, LPVOID pvRef, DWORD dwFlags);
 };
 
-class CDirectInputExtension : public IProgramExtension 
+class CDirectInputExtension final : public IProgramExtension 
 {
 public:
 	typedef IProgramExtension Super;

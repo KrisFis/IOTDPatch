@@ -15,6 +15,26 @@ HRESULT WINAPI dDirectInput8Create	(HINSTANCE hinst, DWORD dwVersion, REFIID rii
 	return result;
 }
 
+HRESULT CInputDevicePatched::GetDeviceState(DWORD cbData, LPVOID lpvData)
+{
+	return CDirectInputDevice8Proxy::GetDeviceState(cbData, lpvData);
+}
+
+HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags)
+{
+	return CDirectInputDevice8Proxy::GetDeviceData(cbObjectData, rgdod, pdwInOut, dwFlags);
+}
+
+HRESULT CInputDevicePatched::BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
+{
+	return CDirectInputDevice8Proxy::BuildActionMap(lpActionFormat, lpszUserName, dwFlags);
+}
+
+HRESULT CInputDevicePatched::SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
+{
+	return CDirectInputDevice8Proxy::SetActionMap(lpActionFormat, lpszUserName, dwFlags);
+}
+
 HRESULT CInputPatched::CreateDevice(REFGUID rguid, LPDIRECTINPUTDEVICE8* lplpDirectInputDevice, LPUNKNOWN pUnkOuter)
 {
 	HRESULT result = Super::CreateDevice(rguid, lplpDirectInputDevice, pUnkOuter);
@@ -29,14 +49,9 @@ HRESULT CInputPatched::EnumDevices(DWORD dwDevType, LPDIENUMDEVICESCALLBACKA lpC
 	return Super::EnumDevices(dwDevType, lpCallback, pvRef, dwFlags);
 }
 
-HRESULT CInputPatched::GetDeviceStatus(REFGUID rguidInstance)
+HRESULT CInputPatched::EnumDevicesBySemantics(LPCSTR pszUserName, LPDIACTIONFORMAT lpActionFormat, LPDIENUMDEVICESBYSEMANTICSCB lpCallback, LPVOID pvRef, DWORD dwFlags)
 {
-	return Super::GetDeviceStatus(rguidInstance);
-}
-
-HRESULT CInputPatched::FindDevice(REFGUID rguidClass, LPCSTR pszName, LPGUID pguidInstance)
-{
-	return Super::FindDevice(rguidClass, pszName, pguidInstance);
+	return CDirectInput8Proxy::EnumDevicesBySemantics(pszUserName, lpActionFormat, lpCallback, pvRef, dwFlags);
 }
 
 void CDirectInputExtension::Initialize()

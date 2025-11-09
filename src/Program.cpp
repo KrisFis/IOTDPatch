@@ -99,10 +99,10 @@ namespace _NProgram
 
 	void Tick(double deltaTime)
 	{
-		if (GetAsyncKeyState(VK_NUMPAD1))
-		{
-			std::cout << "Hello World!" << std::endl;
-		}
+		// if (GetAsyncKeyState(VK_NUMPAD0))
+		// {
+		// 	std::cout << "Hello World!" << std::endl;
+		// }
 
 		for (IProgramExtension* extension : NProgram::Extensions::GetAll())
 		{

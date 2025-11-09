@@ -1,7 +1,3 @@
-[submodule "deps/DLLInjector"]
-	path = deps/DLLInjector
-	url = git@github.com:KrisFis/DLLInjector.git
-	branch = main
 [submodule "deps/ASTD"]
 	path = deps/ASTD
 	url = git@github.com:KrisFis/ASTD.git

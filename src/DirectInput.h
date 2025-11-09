@@ -11,31 +11,31 @@
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 
-#define GENERATE_UNKNOWN_PROXY_BODY(Impl)\
-	__forceinline STDOVERRIDEMETHODIMP QueryInterface(REFIID riid, LPVOID* ppvObj) { return Impl->QueryInterface(riid, ppvObj); } \
-	__forceinline STDOVERRIDEMETHODIMP_(ULONG) AddRef() { return Impl->AddRef(); } \
-	__forceinline STDOVERRIDEMETHODIMP_(ULONG) Release() { return Impl->Release(); }
+#define GENERATE_UNKNOWN_PROXY_BODY(Class, Base)\
+	public:\
+	Class(Base* impl) : _impl(impl) { _impl->AddRef(); }\
+	virtual ~Class() { _impl->Release(); }\
+	__forceinline Base* GetImpl() const { return _impl; }\
+	__forceinline STDOVERRIDEMETHODIMP QueryInterface(REFIID riid, LPVOID* ppvObj) { return _impl->QueryInterface(riid, ppvObj); } \
+	__forceinline STDOVERRIDEMETHODIMP_(ULONG) AddRef() { return _impl->AddRef(); } \
+	__forceinline STDOVERRIDEMETHODIMP_(ULONG) Release() { return _impl->Release(); }\
+	private:\
+	Base* _impl = nullptr;\
 
 // Provides methods to interact with a specific input device (keyboard, mouse, joystick, etc.),
 // manage device state, acquire/release input, and handle force feedback.
 class CDirectInputDevice8Proxy : public IDirectInputDevice8
 {
+	GENERATE_UNKNOWN_PROXY_BODY(CDirectInputDevice8Proxy, IDirectInputDevice8)
+
 public:
-	__forceinline CDirectInputDevice8Proxy(IDirectInputDevice8* impl) : Impl(impl) {}
-	virtual ~CDirectInputDevice8Proxy() = default;
-
-	GENERATE_UNKNOWN_PROXY_BODY(Impl)
-
-	// Gets pointer to real implementation of IDirectInputDevice8
-	__forceinline IDirectInputDevice8* GetImpl() const { return Impl; }
-
 	// @brief Retrieves device capabilities.
 	// 
 	// @param lpDIDevCaps Receives a DIDEVCAPS structure describing device capabilities.
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
 	__forceinline STDOVERRIDEMETHODIMP GetCapabilities(LPDIDEVCAPS lpDIDevCaps)
 	{
-		return Impl->GetCapabilities(lpDIDevCaps);
+		return _impl->GetCapabilities(lpDIDevCaps);
 	}
 
 	// @brief Enumerates device objects (axes, buttons, POVs).
@@ -46,7 +46,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on error.
 	__forceinline STDOVERRIDEMETHODIMP EnumObjects(LPDIENUMDEVICEOBJECTSCALLBACKA lpCallback, LPVOID pvRef, DWORD dwFlags)
 	{
-		return Impl->EnumObjects(lpCallback, pvRef, dwFlags);
+		return _impl->EnumObjects(lpCallback, pvRef, dwFlags);
 	}
 
 	// @brief Retrieves a property from the device.
@@ -56,7 +56,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
 	__forceinline STDOVERRIDEMETHODIMP GetProperty(REFGUID rguidProp, LPDIPROPHEADER pdiph)
 	{
-		return Impl->GetProperty(rguidProp, pdiph);
+		return _impl->GetProperty(rguidProp, pdiph);
 	}
 
 	// @brief Sets a property on the device.
@@ -66,7 +66,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
 	__forceinline STDOVERRIDEMETHODIMP SetProperty(REFGUID rguidProp, LPCDIPROPHEADER pdiph)
 	{
-		return Impl->SetProperty(rguidProp, pdiph);
+		return _impl->SetProperty(rguidProp, pdiph);
 	}
 
 	// @brief Acquires the device for input.
@@ -75,7 +75,7 @@ public:
 	// DIERR_INPUTLOST if input was lost.
 	__forceinline STDOVERRIDEMETHODIMP Acquire()
 	{
-		return Impl->Acquire();
+		return _impl->Acquire();
 	}
 
 	// @brief Unacquires the device.
@@ -83,7 +83,7 @@ public:
 	// @return S_OK on success, or DIERR_NOTACQUIRED if device was not acquired.
 	__forceinline STDOVERRIDEMETHODIMP Unacquire()
 	{
-		return Impl->Unacquire();
+		return _impl->Unacquire();
 	}
 
 	// @brief Retrieves the current state of the device.
@@ -93,7 +93,7 @@ public:
 	// @return S_OK on success, DIERR_INPUTLOST if device lost, DIERR_NOTACQUIRED if not acquired.
 	__forceinline STDOVERRIDEMETHODIMP GetDeviceState(DWORD cbData, LPVOID lpvData)
 	{
-		return Impl->GetDeviceState(cbData, lpvData);
+		return _impl->GetDeviceState(cbData, lpvData);
 	}
 
 	// @brief Retrieves buffered device data.
@@ -105,7 +105,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
 	__forceinline STDOVERRIDEMETHODIMP GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags)
 	{
-		return Impl->GetDeviceData(cbObjectData, rgdod, pdwInOut, dwFlags);
+		return _impl->GetDeviceData(cbObjectData, rgdod, pdwInOut, dwFlags);
 	}
 
 	// @brief Sets the data format for the device.
@@ -114,7 +114,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM if unsupported.
 	__forceinline STDOVERRIDEMETHODIMP SetDataFormat(LPCDIDATAFORMAT lpdf)
 	{
-		return Impl->SetDataFormat(lpdf);
+		return _impl->SetDataFormat(lpdf);
 	}
 
 	// @brief Sets an event notification handle for the device.
@@ -123,7 +123,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
 	__forceinline STDOVERRIDEMETHODIMP SetEventNotification(HANDLE hEvent)
 	{
-		return Impl->SetEventNotification(hEvent);
+		return _impl->SetEventNotification(hEvent);
 	}
 
 	// @brief Sets the cooperative level for the device.
@@ -133,7 +133,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
 	__forceinline STDOVERRIDEMETHODIMP SetCooperativeLevel(HWND hwnd, DWORD dwFlags)
 	{
-		return Impl->SetCooperativeLevel(hwnd, dwFlags);
+		return _impl->SetCooperativeLevel(hwnd, dwFlags);
 	}
 
 	// @brief Retrieves information about a specific device object (axis, button, etc.).
@@ -144,7 +144,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
 	__forceinline STDOVERRIDEMETHODIMP GetObjectInfo(LPDIDEVICEOBJECTINSTANCEA pdidoi, DWORD dwObj, DWORD dwHow)
 	{
-		return Impl->GetObjectInfo(pdidoi, dwObj, dwHow);
+		return _impl->GetObjectInfo(pdidoi, dwObj, dwHow);
 	}
 
 	// @brief Retrieves information about the device itself.
@@ -153,7 +153,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
 	__forceinline STDOVERRIDEMETHODIMP GetDeviceInfo(LPDIDEVICEINSTANCEA pdidi)
 	{
-		return Impl->GetDeviceInfo(pdidi);
+		return _impl->GetDeviceInfo(pdidi);
 	}
 
 	// @brief Opens the Windows Control Panel for device configuration.
@@ -163,7 +163,7 @@ public:
 	// @return S_OK on success, or DIERR_GENERIC on failure.
 	__forceinline STDOVERRIDEMETHODIMP RunControlPanel(HWND hwndOwner, DWORD dwFlags)
 	{
-		return Impl->RunControlPanel(hwndOwner, dwFlags);
+		return _impl->RunControlPanel(hwndOwner, dwFlags);
 	}
 
 	// @brief Initializes the device.
@@ -174,7 +174,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
 	__forceinline STDOVERRIDEMETHODIMP Initialize(HINSTANCE hinst, DWORD dwVersion, REFGUID rguid)
 	{
-		return Impl->Initialize(hinst, dwVersion, rguid);
+		return _impl->Initialize(hinst, dwVersion, rguid);
 	}
 
 	// @brief Creates a force feedback effect on the device.
@@ -186,7 +186,7 @@ public:
 	// @return S_OK on success, DIERR_INVALIDPARAM if unsupported.
 	__forceinline STDOVERRIDEMETHODIMP CreateEffect(REFGUID rguid, LPCDIEFFECT lpeff, LPDIRECTINPUTEFFECT *ppdeff, LPUNKNOWN pUnkOuter)
 	{
-		return Impl->CreateEffect(rguid, lpeff, ppdeff, pUnkOuter);
+		return _impl->CreateEffect(rguid, lpeff, ppdeff, pUnkOuter);
 	}
 
 	// @brief Enumerates force feedback effects supported by the device.
@@ -197,7 +197,7 @@ public:
 	// @return S_OK on success, DIERR_UNSUPPORTED if device does not support force feedback.
 	__forceinline STDOVERRIDEMETHODIMP EnumEffects(LPDIENUMEFFECTSCALLBACKA lpCallback, LPVOID pvRef, DWORD dwFlags)
 	{
-		return Impl->EnumEffects(lpCallback, pvRef, dwFlags);
+		return _impl->EnumEffects(lpCallback, pvRef, dwFlags);
 	}
 
 	// @brief Retrieves information about a specific force feedback effect.
@@ -207,7 +207,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
 	__forceinline STDOVERRIDEMETHODIMP GetEffectInfo(LPDIEFFECTINFOA peffinfo, REFGUID rguid)
 	{
-		return Impl->GetEffectInfo(peffinfo, rguid);
+		return _impl->GetEffectInfo(peffinfo, rguid);
 	}
 
 	// @brief Retrieves the current force feedback state.
@@ -216,7 +216,7 @@ public:
 	// @return S_OK on success, or DIERR_UNSUPPORTED if device has no force feedback.
 	__forceinline STDOVERRIDEMETHODIMP GetForceFeedbackState(LPDWORD pdwOut)
 	{
-		return Impl->GetForceFeedbackState(pdwOut);
+		return _impl->GetForceFeedbackState(pdwOut);
 	}
 
 	// @brief Sends a force feedback command to the device.
@@ -225,7 +225,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
 	__forceinline STDOVERRIDEMETHODIMP SendForceFeedbackCommand(DWORD dwFlags)
 	{
-		return Impl->SendForceFeedbackCommand(dwFlags);
+		return _impl->SendForceFeedbackCommand(dwFlags);
 	}
 
 	// @brief Enumerates created effect objects.
@@ -236,7 +236,7 @@ public:
 	// @return S_OK on success, or DIERR_UNSUPPORTED if no effects exist.
 	__forceinline STDOVERRIDEMETHODIMP EnumCreatedEffectObjects(LPDIENUMCREATEDEFFECTOBJECTSCALLBACK lpCallback, LPVOID pvRef, DWORD dwFlags)
 	{
-		return Impl->EnumCreatedEffectObjects(lpCallback, pvRef, dwFlags);
+		return _impl->EnumCreatedEffectObjects(lpCallback, pvRef, dwFlags);
 	}
 
 	// @brief Sends a device-specific escape command.
@@ -245,7 +245,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
 	__forceinline STDOVERRIDEMETHODIMP Escape(LPDIEFFESCAPE peffesc)
 	{
-		return Impl->Escape(peffesc);
+		return _impl->Escape(peffesc);
 	}
 
 	// @brief Polls the device for state updates.
@@ -253,7 +253,7 @@ public:
 	// @return S_OK on success, or DIERR_NOTACQUIRED / DIERR_INPUTLOST if polling fails.
 	__forceinline STDOVERRIDEMETHODIMP Poll()
 	{
-		return Impl->Poll();
+		return _impl->Poll();
 	}
 
 	// @brief Sends buffered device data.
@@ -265,7 +265,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
 	__forceinline STDOVERRIDEMETHODIMP SendDeviceData(DWORD cbObjectData, LPCDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags)
 	{
-		return Impl->SendDeviceData(cbObjectData, rgdod, pdwInOut, dwFlags);
+		return _impl->SendDeviceData(cbObjectData, rgdod, pdwInOut, dwFlags);
 	}
 
 	// @brief Enumerates effects stored in a file.
@@ -277,7 +277,7 @@ public:
 	// @return S_OK on success, or DIERR_UNSUPPORTED if device has no force feedback.
 	__forceinline STDOVERRIDEMETHODIMP EnumEffectsInFile(LPCSTR pszFileName, LPDIENUMEFFECTSINFILECALLBACK lpCallback, LPVOID pvRef, DWORD dwFlags)
 	{
-		return Impl->EnumEffectsInFile(pszFileName, lpCallback, pvRef, dwFlags);
+		return _impl->EnumEffectsInFile(pszFileName, lpCallback, pvRef, dwFlags);
 	}
 
 	// @brief Writes an effect to a file.
@@ -289,7 +289,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
 	__forceinline STDOVERRIDEMETHODIMP WriteEffectToFile(LPCSTR pszFileName, DWORD dwEntries, LPDIFILEEFFECT pDef, DWORD dwFlags)
 	{
-		return Impl->WriteEffectToFile(pszFileName, dwEntries, pDef, dwFlags);
+		return _impl->WriteEffectToFile(pszFileName, dwEntries, pDef, dwFlags);
 	}
 
 	// @brief Builds an action map from the device.
@@ -300,7 +300,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
 	__forceinline STDOVERRIDEMETHODIMP BuildActionMap(LPDIACTIONFORMATA lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
 	{
-		return Impl->BuildActionMap(lpActionFormat, lpszUserName, dwFlags);
+		return _impl->BuildActionMap(lpActionFormat, lpszUserName, dwFlags);
 	}
 
 	// @brief Sets an action map on the device.
@@ -311,7 +311,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on failure.
 	__forceinline STDOVERRIDEMETHODIMP SetActionMap(LPDIACTIONFORMATA lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
 	{
-		return Impl->SetActionMap(lpActionFormat, lpszUserName, dwFlags);
+		return _impl->SetActionMap(lpActionFormat, lpszUserName, dwFlags);
 	}
 
 	// @brief Retrieves an image of the device (for visualization purposes).
@@ -320,26 +320,17 @@ public:
 	// @return S_OK on success, or DIERR_UNSUPPORTED if device has no image info.
 	__forceinline STDOVERRIDEMETHODIMP GetImageInfo(LPDIDEVICEIMAGEINFOHEADERA pdiiHeader)
 	{
-		return Impl->GetImageInfo(pdiiHeader);
+		return _impl->GetImageInfo(pdiiHeader);
 	}
-
-private:
-	IDirectInputDevice8* Impl = nullptr;
 };
 
 // Provides methods for creating and enumerating input devices, 
 // managing device configurations, and querying device status.
 class CDirectInput8Proxy : public IDirectInput8
 {
+	GENERATE_UNKNOWN_PROXY_BODY(CDirectInput8Proxy, IDirectInput8)
+
 public:
-	__forceinline CDirectInput8Proxy(IDirectInput8* impl) : Impl(impl) {}
-	virtual ~CDirectInput8Proxy() = default;
-
-	GENERATE_UNKNOWN_PROXY_BODY(Impl)
-
-	// Gets pointer to real implementation of IDirectInputDevice8
-	__forceinline IDirectInput8* GetImpl() const { return Impl; }
-
 	// @brief Creates a DirectInput device instance.
 	// 
 	// @param rguid GUID of the device (e.g., GUID_SysKeyboard, GUID_SysMouse).
@@ -348,7 +339,7 @@ public:
 	// @return S_OK on success, or a DirectInput error code.
 	__forceinline STDOVERRIDEMETHODIMP CreateDevice(REFGUID rguid, LPDIRECTINPUTDEVICE8* lplpDirectInputDevice, LPUNKNOWN pUnkOuter)
 	{
-		return Impl->CreateDevice(rguid, lplpDirectInputDevice, pUnkOuter);
+		return _impl->CreateDevice(rguid, lplpDirectInputDevice, pUnkOuter);
 	}
 
 	// @brief Enumerates available DirectInput devices.
@@ -360,7 +351,7 @@ public:
 	// @return S_OK on success, or a DirectInput error code.
 	__forceinline STDOVERRIDEMETHODIMP EnumDevices(DWORD dwDevType, LPDIENUMDEVICESCALLBACK lpCallback, LPVOID pvRef, DWORD dwFlags)
 	{
-		return Impl->EnumDevices(dwDevType, lpCallback, pvRef, dwFlags);
+		return _impl->EnumDevices(dwDevType, lpCallback, pvRef, dwFlags);
 	}
 
 	// @brief Checks whether a device is currently attached and available.
@@ -369,7 +360,7 @@ public:
 	// @return S_OK if device is connected, DIERR_INPUTLOST if not.
 	__forceinline STDOVERRIDEMETHODIMP GetDeviceStatus(REFGUID rguidInstance)
 	{
-		return Impl->GetDeviceStatus(rguidInstance);
+		return _impl->GetDeviceStatus(rguidInstance);
 	}
 
 	// @brief Opens the Windows Control Panel for DirectInput configuration.
@@ -379,7 +370,7 @@ public:
 	// @return S_OK on success, or DIERR_GENERIC on failure.
 	__forceinline STDOVERRIDEMETHODIMP RunControlPanel(HWND hwndOwner, DWORD dwFlags)
 	{
-		return Impl->RunControlPanel(hwndOwner, dwFlags);
+		return _impl->RunControlPanel(hwndOwner, dwFlags);
 	}
 
 	// @brief Initializes the DirectInput object.
@@ -389,7 +380,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on invalid parameters.
 	__forceinline STDOVERRIDEMETHODIMP Initialize(HINSTANCE hinst, DWORD dwVersion)
 	{
-		return Impl->Initialize(hinst, dwVersion);
+		return _impl->Initialize(hinst, dwVersion);
 	}
 
 	// @brief Finds a device by class GUID and name.
@@ -400,7 +391,7 @@ public:
 	// @return S_OK if found, DIERR_NOTFOUND if not.
 	__forceinline STDOVERRIDEMETHODIMP FindDevice(REFGUID rguidClass, LPCSTR pszName, LPGUID pguidInstance)
 	{
-		return Impl->FindDevice(rguidClass, pszName, pguidInstance);
+		return _impl->FindDevice(rguidClass, pszName, pguidInstance);
 	}
 
 	// @brief Enumerates devices associated with specific input actions.
@@ -413,7 +404,7 @@ public:
 	// @return S_OK on success, or DIERR_INVALIDPARAM on error.
 	__forceinline STDOVERRIDEMETHODIMP EnumDevicesBySemantics(LPCSTR pszUserName, LPDIACTIONFORMAT lpActionFormat, LPDIENUMDEVICESBYSEMANTICSCB lpCallback, LPVOID pvRef, DWORD dwFlags)
 	{
-		return Impl->EnumDevicesBySemantics(pszUserName, lpActionFormat, lpCallback, pvRef, dwFlags);
+		return _impl->EnumDevicesBySemantics(pszUserName, lpActionFormat, lpCallback, pvRef, dwFlags);
 	}
 
 	// @brief Displays a device configuration user interface.
@@ -425,9 +416,6 @@ public:
 	// @return S_OK on success, or DIERR_GENERIC on failure.
 	__forceinline STDOVERRIDEMETHODIMP ConfigureDevices(LPDICONFIGUREDEVICESCALLBACK lpdiCallback, LPDICONFIGUREDEVICESPARAMS lpdiCDParams, DWORD dwFlags, LPVOID pvRefData)
 	{
-		return Impl->ConfigureDevices(lpdiCallback, lpdiCDParams, dwFlags, pvRefData);
+		return _impl->ConfigureDevices(lpdiCallback, lpdiCDParams, dwFlags, pvRefData);
 	}
-
-private:
-	IDirectInput8* Impl = nullptr;
 };

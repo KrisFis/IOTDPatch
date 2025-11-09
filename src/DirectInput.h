@@ -11,21 +11,23 @@
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 
+// Proxy MUST BE allocated via "new"
+// TODO: implement factory for proxies
 #define GENERATE_COM_PROXY_BASE_BODY(Class, Base)\
 	public:\
 	Class() = delete;\
-	Class(Base* impl) : _impl(impl) { _impl->AddRef(); }\
-	virtual ~Class() { _impl->Release(); }\
-	Class(const Class& other) { _impl = other._impl; _impl->AddRef(); }\
-	Class& operator=(const Class& other) { _impl = other._impl; _impl->AddRef(); return *this; }\
-	Class(Class&&) = default;\
-	Class& operator=(Class&&) = default;\
+	Class(Base* impl) : _impl(impl) {}\
+	virtual ~Class() = default; \
+	Class(const Class& other) = delete;\
+	Class& operator=(const Class& other) = delete;\
+	Class(Class&& other) = delete;\
+	Class& operator=(Class&& other) = delete;\
 	__forceinline Base* GetImpl() const { return _impl; }\
 	__forceinline STDOVERRIDEMETHODIMP QueryInterface(REFIID riid, LPVOID* ppvObj) { return _impl->QueryInterface(riid, ppvObj); } \
 	__forceinline STDOVERRIDEMETHODIMP_(ULONG) AddRef() { return _impl->AddRef(); } \
-	__forceinline STDOVERRIDEMETHODIMP_(ULONG) Release() { return _impl->Release(); }\
+	__forceinline STDOVERRIDEMETHODIMP_(ULONG) Release() { const ULONG refs = _impl->Release(); if(refs == 0) { delete this; } return refs; }\
 	private:\
-	Base* _impl = nullptr;\
+	Base* _impl = nullptr;
 
 // Provides methods to interact with a specific input device (keyboard, mouse, joystick, etc.),
 // manage device state, acquire/release input, and handle force feedback.

@@ -138,7 +138,7 @@ namespace NProgram
 		if (const bool initResult = Init(); !initResult)
 		{
 			Shutdown();
-			return initResult;
+			return EXIT_FAILURE;
 		}
 
 		constexpr double TICKS_PER_SECOND = 10.0;

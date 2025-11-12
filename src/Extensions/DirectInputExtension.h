@@ -26,6 +26,93 @@ enum class EInputDeviceType : uint8
 SString ToString(EInputDeviceType type);
 SString ToString(const GUID& guid);
 
+template<>
+struct std::hash<GUID>
+{
+	_NODISCARD size_t operator()(const GUID& g) const noexcept
+	{
+		size_t h = g.Data1 ^ g.Data2 ^ g.Data3;
+		h ^= (g.Data4[0] | (g.Data4[1]<<8) | (g.Data4[2]<<16) | (g.Data4[3]<<24));
+		return h;
+	}
+};
+
+template<typename KeyT, typename ValueT>
+struct TFastMap
+{
+	FORCEINLINE const TArray<ValueT>& GetValues() const { return _elements; }
+	FORCEINLINE int32 GetNum() const { return _elements.GetNum(); }
+
+	FORCEINLINE bool Contains(const KeyT& id) const { return _lookup.contains(id); }
+	FORCEINLINE const ValueT* Find(const KeyT& id) const
+	{
+		const auto& it  = _lookup.find(id);
+		return it != _lookup.end() ? &_elements[it->second] : nullptr;
+	}
+
+	FORCEINLINE const ValueT* FindByIndex(const int32 idx) const
+	{
+		return _elements.IsValidIndex(idx) ? &_elements[idx] : nullptr;
+	}
+
+	FORCEINLINE ValueT& GetByIndex(const int32 idx) { return _elements[idx]; }
+	FORCEINLINE const ValueT& GetByIndex(const int32 idx) const { return _elements[idx]; }
+
+	FORCEINLINE ValueT FindCopy(const KeyT& id) const
+	{
+		if (const ValueT* result = Find(id))
+		{
+			return *result;
+		}
+		return ValueT();
+	}
+
+	ValueT& FindOrAdd(const KeyT& id)
+	{
+		if (const auto& it = _lookup.find(id);
+			it != _lookup.end())
+		{
+			return _elements[it->second];
+		}
+
+		_lookup[id] = _elements.GetNum();
+		return _elements.AddDefaulted_GetRef();
+	}
+
+	FORCEINLINE void Reset()
+	{
+		_elements.Empty();
+		_lookup.clear();
+	}
+
+private:
+	TArray<ValueT> _elements;
+	std::unordered_map<KeyT, uint16> _lookup;
+};
+
+struct SInputDeviceMap
+{
+	SInputDeviceMap() = default;
+	FORCEINLINE SInputDeviceMap(const DIACTIONFORMAT& other) { InitializeAs(other); }
+
+	FORCEINLINE bool IsValid() const { return _data.dwSize > 0; }
+
+	FORCEINLINE SInputDeviceMap(const SInputDeviceMap& other) { InitializeAs(other._data); }
+	FORCEINLINE SInputDeviceMap& operator=(const SInputDeviceMap& other) { InitializeAs(other._data); return *this; }
+
+	FORCEINLINE ~SInputDeviceMap() { Reset(); }
+
+	FORCEINLINE const DIACTIONFORMAT& GetData() const { return _data; }
+	FORCEINLINE operator const DIACTIONFORMAT&() const { return _data; }
+
+	void Reset();
+
+private:
+	void InitializeAs(const DIACTIONFORMAT& data);
+
+	DIACTIONFORMAT _data = DIACTIONFORMAT();
+};
+
 class CInputDevicePatched final : public CDirectInputDevice8Proxy
 {
 public:
@@ -37,9 +124,6 @@ public:
 	FORCEINLINE const SString& GetIdString() const { return _idAsStr; }
 	FORCEINLINE const DIDEVICEINSTANCE& GetData() const { return _data; }
 
-	STDOVERRIDEMETHODIMP_(ULONG) AddRef();
-	STDOVERRIDEMETHODIMP_(ULONG) Release();
-
 	STDOVERRIDEMETHODIMP GetDeviceState(DWORD cbData, LPVOID lpvData);
 	STDOVERRIDEMETHODIMP GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags);
 	STDOVERRIDEMETHODIMP BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags);
@@ -49,13 +133,12 @@ private:
 	EInputDeviceType _type = EInputDeviceType::None;
 
 	SString _idAsStr;
-	DIDEVICEINSTANCE _data;
+	SString _typeAsStr;
 
-	struct
-	{
-		TOptional<DIACTIONFORMAT> Format;
-		uint8 Saved : 1 = false;
-	} _map;
+	DIDEVICEINSTANCE _data;
+	std::string _activeMapId;
+
+	TFastMap<std::string, SInputDeviceMap> _maps;
 };
 
 class CInputPatched final : public CDirectInput8Proxy
@@ -65,16 +148,14 @@ public:
 
 	CInputPatched(IDirectInput8* impl);
 
-	STDOVERRIDEMETHODIMP_(ULONG) AddRef();
-	STDOVERRIDEMETHODIMP_(ULONG) Release();
-
 	STDOVERRIDEMETHODIMP CreateDevice(REFGUID rguid, LPDIRECTINPUTDEVICE8* lplpDirectInputDevice, LPUNKNOWN pUnkOuter);
 	STDOVERRIDEMETHODIMP EnumDevices(DWORD dwDevType, LPDIENUMDEVICESCALLBACK lpCallback, LPVOID pvRef, DWORD dwFlags);
 	STDOVERRIDEMETHODIMP EnumDevicesBySemantics(LPCSTR pszUserName, LPDIACTIONFORMAT lpActionFormat, LPDIENUMDEVICESBYSEMANTICSCB lpCallback, LPVOID pvRef, DWORD dwFlags);
 
 private:
 	friend BOOL CALLBACK HandleEnumDevices(const DIDEVICEINSTANCE* pdidInstance, VOID* pvRef);
-	TArray<TComPtr<CInputDevicePatched>> _devices;
+
+	TFastMap<GUID, TComPtr<CInputDevicePatched>> _devices;
 };
 
 class CDirectInputExtension final : public IProgramExtension 

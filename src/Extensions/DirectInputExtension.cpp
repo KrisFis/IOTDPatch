@@ -40,27 +40,21 @@ BOOL CALLBACK HandleEnumDevices(const DIDEVICEINSTANCE* pdidInstance, void* pvRe
 		return DIENUM_CONTINUE;
 	}
 
-	const bool alreadyExists = owner->_devices.ContainsByFunc(
-		[&id](const TComPtr<CInputDevicePatched>& ptr) -> bool
-		{
-			return IsEqualGUID(ptr->GetId(), id);
-		}
-	);
-
-	if (!CHECK(!alreadyExists))
+	TComPtr<CInputDevicePatched>& device = owner->_devices.FindOrAdd(id);
+	if (!CHECK(!device.IsValid()))
 	{
 		return DIENUM_CONTINUE;
 	}
 
 	LogInfo(TEXT("CInputPatched: Created new '%s' device '%s'"), *typeAsStr, *idAsStr);
-	owner->_devices.Emplace(new CInputDevicePatched(newDevice, *pdidInstance), true);
+	device.Reset(new CInputDevicePatched(newDevice, *pdidInstance), true);
 
 	return DIENUM_CONTINUE;
 }
 
 HRESULT WINAPI HandleDirectInput8Create(HINSTANCE hinst, DWORD dwVersion, REFIID riidltf, LPVOID* ppvOut, LPUNKNOWN punkOuter)
 {
-	CDirectInputExtension* ext = NProgram::Extensions::Get<CDirectInputExtension>();
+	const CDirectInputExtension* ext = NProgram::Extensions::Get<CDirectInputExtension>();
 	if (!ext->GetCOM().IsValid())
 	{
 		LogWarning(TEXT("CInputPatched: Can't find input"));
@@ -102,26 +96,38 @@ SString ToString(const GUID& guid)
 	);
 }
 
+void SInputDeviceMap::Reset()
+{
+	if (_data.dwSize == 0) return;
+
+	if (_data.rgoAction)
+	{
+		SMemory::Free(_data.rgoAction);
+	}
+
+	_data = DIACTIONFORMAT();
+}
+
+void SInputDeviceMap::InitializeAs(const DIACTIONFORMAT& data)
+{
+	Reset();
+
+	_data = data;
+	if (data.rgoAction)
+	{
+		const uint64 bytes = data.dwNumActions * data.dwActionSize;
+		_data.rgoAction = (DIACTION*)SMemory::Malloc(bytes);
+		SMemory::Copy(_data.rgoAction, data.rgoAction, bytes);
+	}
+}
+
 CInputDevicePatched::CInputDevicePatched(IDirectInputDevice8A* impl, const DIDEVICEINSTANCE& data)
 	: Super(impl)
 	, _type((EInputDeviceType)LOBYTE(data.dwDevType))
 	, _idAsStr(ToString(data.guidInstance))
+	, _typeAsStr(ToString(_type))
 	, _data(data)
 {}
-
-ULONG CInputDevicePatched::AddRef()
-{
-	const ULONG refs = Super::AddRef();
-	LogDebug(TEXT("CInputDevicePatched %s: AddRef '%d'"), *_idAsStr, refs);
-	return refs;
-}
-
-ULONG CInputDevicePatched::Release()
-{
-	const ULONG refs = Super::Release();
-	LogDebug(TEXT("CInputDevicePatched %s: Release '%d'"), *_idAsStr, refs);
-	return refs;
-}
 
 HRESULT CInputDevicePatched::GetDeviceState(DWORD cbData, LPVOID lpvData)
 {
@@ -135,35 +141,62 @@ HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTD
 
 HRESULT CInputDevicePatched::BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
 {
-	if (_map.Format.IsSet())
+	SInputDeviceMap& mapFormat = _maps.FindOrAdd(lpActionFormat->tszActionMap);
+	if (mapFormat.IsValid())
 	{
-		*lpActionFormat = _map.Format.GetRef();
+		*lpActionFormat = mapFormat;
 		return S_OK;
 	}
 
 	const HRESULT result = CDirectInputDevice8Proxy::BuildActionMap(lpActionFormat, lpszUserName, dwFlags);
-	if (SUCCEEDED(result) && lpActionFormat)
+	if (FAILED(result))
 	{
-		_map.Format = *lpActionFormat;
-		LogInfo(TEXT("CInputDevicePatched %s: Map built for '%s'"), *_idAsStr, lpszUserName);
+		LogWarning(TEXT("CInputDevicePatched%s %s: Map '%s' build failed for '%s'"),
+			*_typeAsStr,
+			BUILD_DEBUG ? *_idAsStr : "",
+			lpActionFormat->tszActionMap,
+			lpszUserName
+		);
+		return result;
 	}
+
+	mapFormat = *lpActionFormat;
+	LogInfo(TEXT("CInputDevicePatched%s %s: Map '%s' built for '%s'"),
+		*_typeAsStr,
+		BUILD_DEBUG ? *_idAsStr : "",
+		lpActionFormat->tszActionMap,
+		lpszUserName
+	);
 
 	return result;
 }
 
 HRESULT CInputDevicePatched::SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
 {
-	if (!(dwFlags & DIDSAM_FORCESAVE) && _map.Saved)
+	if (!(dwFlags & DIDSAM_FORCESAVE) && _activeMapId.compare(lpActionFormat->tszActionMap) == 0)
 	{
 		return S_OK;
 	}
 
 	const HRESULT result = CDirectInputDevice8Proxy::SetActionMap(lpActionFormat, lpszUserName, dwFlags);
-	if (SUCCEEDED(result))
+	if (FAILED(result))
 	{
-		_map.Saved = true;
-		LogInfo(TEXT("CInputDevicePatched %s: Map applied for '%s'"), *_idAsStr, lpszUserName);
+		LogWarning(TEXT("CInputDevicePatched%s %s: Map '%s' application failed for '%s'"), 
+			*_typeAsStr,
+			BUILD_DEBUG ? *_idAsStr : "",
+			lpActionFormat->tszActionMap,
+			lpszUserName
+		);
+		return result;
 	}
+
+	_activeMapId = lpActionFormat->tszActionMap;
+	LogInfo(TEXT("CInputDevicePatched%s %s: Map '%s' applied for '%s'"), 
+		*_typeAsStr,
+		BUILD_DEBUG ? *_idAsStr : "",
+		lpActionFormat->tszActionMap,
+		lpszUserName
+	);
 
 	return result;
 }
@@ -171,46 +204,30 @@ HRESULT CInputDevicePatched::SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCST
 CInputPatched::CInputPatched(IDirectInput8A* impl)
 	: Super(impl)
 {
-	impl->EnumDevices(DI8DEVCLASS_ALL, HandleEnumDevices, this, DIEDFL_ATTACHEDONLY);
-}
-
-ULONG CInputPatched::AddRef()
-{
-	const ULONG refs = Super::AddRef();
-	LogDebug(TEXT("CInputPatched: AddRef '%d'"), refs);
-	return refs;
-}
-
-ULONG CInputPatched::Release()
-{
-	const ULONG refs = Super::Release();
-	LogDebug(TEXT("CInputPatched: Release '%d'"), refs);
-	return refs;
+	const HRESULT result = impl->EnumDevices(DI8DEVCLASS_ALL, HandleEnumDevices, this, DIEDFL_ATTACHEDONLY);
+	if (!CHECK(SUCCEEDED(result)))
+	{
+		LogWarning(TEXT("CInputPatched: Could not evaluate devices !"));
+	}
 }
 
 HRESULT CInputPatched::CreateDevice(REFGUID rguid, LPDIRECTINPUTDEVICE8* lplpDirectInputDevice, LPUNKNOWN pUnkOuter)
 {
-	const int32 foundIdx = _devices.FindIndexByFunc(
-		[&rguid](const TComPtr<CInputDevicePatched>& ptr) -> bool
-		{
-			return IsEqualGUID(ptr->GetId(), rguid);
-		}
-	);
-
-	if (foundIdx == INDEX_NONE)
+	TComPtr<CInputDevicePatched> devices = _devices.FindCopy(rguid);
+	if (!devices.IsValid())
 	{
 		LogWarning(TEXT("CInputPatched: Can't find '%s' device"), *ToString(rguid));
 		return S_FALSE;
 	}
 
-	*lplpDirectInputDevice = _devices[foundIdx].Get();
-	_devices[foundIdx]->AddRef(); // since we are exposing, we need to add ref
+	*lplpDirectInputDevice = devices.Get();
+	devices->AddRef(); // since we are exposing, we need to add ref
 	return S_OK;
 }
 
 HRESULT CInputPatched::EnumDevices(DWORD dwDevType, LPDIENUMDEVICESCALLBACK lpCallback, LPVOID pvRef, DWORD dwFlags)
 {
-	for (const TComPtr<CInputDevicePatched>& device : _devices)
+	for (const TComPtr<CInputDevicePatched>& device : _devices.GetValues())
 	{
 		const BOOL result = lpCallback(&device->GetData(), pvRef);
 		if (result == DIENUM_STOP) break;
@@ -223,7 +240,7 @@ HRESULT CInputPatched::EnumDevicesBySemantics(LPCSTR pszUserName, LPDIACTIONFORM
 {
 	for (uint16 i = 0; i < _devices.GetNum(); ++i)
 	{
-		const auto& device = _devices[i];
+		const auto& device = _devices.GetByIndex(i);
 		const uint16 remaining = (_devices.GetNum() - 1) - i;
 
 		const BOOL result = lpCallback(&device->GetData(), device.Get(), DIEDBS_RECENTDEVICE, remaining, pvRef);

@@ -23,7 +23,133 @@ enum class EInputDeviceType : uint8
 	Supplemental = DI8DEVTYPE_SUPPLEMENTAL,
 };
 
+enum class EInputKey : uint8
+{
+	None = 0,
+
+	MouseX = DIMOFS_X,
+	MouseY = DIMOFS_Y,
+	MouseZ = DIMOFS_Z,
+
+	MouseButtonZero = DIMOFS_BUTTON0,
+	MouseButtonOne = DIMOFS_BUTTON1,
+	MouseButtonTwo = DIMOFS_BUTTON2,
+	MouseButtonThree = DIMOFS_BUTTON3,
+	MouseButtonFour = DIMOFS_BUTTON4,
+	MouseButtonFive = DIMOFS_BUTTON5,
+	MouseButtonSix = DIMOFS_BUTTON6,
+	MouseButtonSeven = DIMOFS_BUTTON7,
+
+	Q = DIK_Q,
+	W = DIK_W,
+	E = DIK_E,
+	R = DIK_R,
+	T = DIK_T,
+	Y = DIK_Y,
+	U = DIK_U,
+	I = DIK_I,
+	O = DIK_O,
+	P = DIK_P,
+	A = DIK_A,
+	S = DIK_S,
+	D = DIK_D,
+	F = DIK_F,
+	G = DIK_G,
+	H = DIK_H,
+	J = DIK_J,
+	K = DIK_K,
+	L = DIK_L,
+
+	Z = DIK_Z,
+	X = DIK_X,
+	C = DIK_C,
+	V = DIK_V,
+	B = DIK_B,
+	N = DIK_N,
+	M = DIK_M,
+
+	F1 = DIK_F1,
+	F2 = DIK_F2,
+	F3 = DIK_F3,
+	F4 = DIK_F4,
+	F5 = DIK_F5,
+	F6 = DIK_F6,
+	F7 = DIK_F7,
+	F8 = DIK_F8,
+	F9 = DIK_F9,
+	F10 = DIK_F10,
+	F11 = DIK_F11,
+	F12 = DIK_F12,
+
+	Escape = DIK_ESCAPE,
+	One = DIK_1,
+	Two = DIK_2,
+	Three = DIK_3,
+	Four = DIK_4,
+	Five = DIK_5,
+	Six = DIK_6,
+	Seven = DIK_7,
+	Eight = DIK_8,
+	Nine = DIK_9,
+	Zero = DIK_0,
+	Minus = DIK_MINUS,
+	Equals = DIK_EQUALS,
+	Back = DIK_BACK,
+	Tab = DIK_TAB,
+	Semicolon = DIK_SEMICOLON,
+	Apostrophe = DIK_APOSTROPHE,
+	Grave = DIK_GRAVE,
+	LeftShift = DIK_LSHIFT,
+	Backslash = DIK_BACKSLASH,
+
+	Comma = DIK_COMMA,
+	Period = DIK_PERIOD,
+	Slash = DIK_SLASH,
+	RightShift = DIK_RSHIFT,
+	Multiply = DIK_MULTIPLY,
+	LeftMenu = DIK_LMENU,
+	Space = DIK_SPACE,
+	Capital = DIK_CAPITAL,
+
+	LeftBracket = DIK_LBRACKET,
+	RightBracket = DIK_RBRACKET,
+	Return = DIK_RETURN,
+	LeftControl = DIK_LCONTROL,
+
+	NumpadSeven = DIK_NUMPAD7,
+	NumpadEight = DIK_NUMPAD8,
+	NumpadNine = DIK_NUMPAD9,
+	Subtract = DIK_SUBTRACT,
+	NumpadFour = DIK_NUMPAD4,
+	NumpadFive = DIK_NUMPAD5,
+	NumpadSix = DIK_NUMPAD6,
+	NumpadAdd = DIK_ADD,
+	NumpadOne = DIK_NUMPAD1,
+	NumpadTwo = DIK_NUMPAD2,
+	NumpadThree = DIK_NUMPAD3,
+	NumpadZero = DIK_NUMPAD0,
+	Decimal = DIK_DECIMAL,
+	NumpadEquals = DIK_NUMPADEQUALS,
+	NumpadEnter = DIK_NUMPADENTER,
+	RightControl = DIK_RCONTROL,
+	NumpadComma = DIK_NUMPADCOMMA,
+	NumpadDivide = DIK_DIVIDE,
+	RightAlt = DIK_RALT,
+	Pause = DIK_PAUSE,
+	Home = DIK_HOME,
+	Up = DIK_UP,
+	PageUp = DIK_PRIOR,
+	Left = DIK_LEFT,
+	Right = DIK_RIGHT,
+	End = DIK_END,
+	Down = DIK_DOWN,
+	Next = DIK_NEXT,
+	Insert = DIK_INSERT,
+	Delete = DIK_DELETE
+};
+
 SString ToString(EInputDeviceType type);
+SString ToString(EInputKey type, EInputDeviceType deviceType);
 SString ToString(const GUID& guid);
 
 template<>
@@ -120,6 +246,9 @@ public:
 
 	CInputDevicePatched(IDirectInputDevice8* impl, const DIDEVICEINSTANCE& data);
 
+	FORCEINLINE const std::string& GetActiveActionMap() const { return _activeMapId; }
+	FORCEINLINE const TFastMap<std::string, SInputDeviceMap>& GetActionMaps() const { return _maps; }
+
 	FORCEINLINE const GUID& GetId() const { return _data.guidInstance; }
 	FORCEINLINE const SString& GetIdString() const { return _idAsStr; }
 	FORCEINLINE const DIDEVICEINSTANCE& GetData() const { return _data; }
@@ -128,6 +257,8 @@ public:
 	STDOVERRIDEMETHODIMP GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags);
 	STDOVERRIDEMETHODIMP BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags);
 	STDOVERRIDEMETHODIMP SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags);
+
+	void PrintActiveActionMap() const;
 
 private:
 	EInputDeviceType _type = EInputDeviceType::None;
@@ -148,6 +279,8 @@ public:
 
 	CInputPatched(IDirectInput8* impl);
 
+	FORCEINLINE const TFastMap<GUID, TComPtr<CInputDevicePatched>>& GetDevices() const { return _devices; }
+
 	STDOVERRIDEMETHODIMP CreateDevice(REFGUID rguid, LPDIRECTINPUTDEVICE8* lplpDirectInputDevice, LPUNKNOWN pUnkOuter);
 	STDOVERRIDEMETHODIMP EnumDevices(DWORD dwDevType, LPDIENUMDEVICESCALLBACK lpCallback, LPVOID pvRef, DWORD dwFlags);
 	STDOVERRIDEMETHODIMP EnumDevicesBySemantics(LPCSTR pszUserName, LPDIACTIONFORMAT lpActionFormat, LPDIENUMDEVICESBYSEMANTICSCB lpCallback, LPVOID pvRef, DWORD dwFlags);
@@ -167,11 +300,13 @@ public:
 
 	// ~BEGIN IProgramExtension interface
 	virtual void Initialize() override;
-	virtual void Tick(double deltaTime) override {}
+	virtual void Tick(double deltaTime) override;
 	virtual void Shutdown() override;
 	// ~END IProgramExtension interface
 
 private:
+	void PrintActiveMapping(const int32 deviceIdx = INDEX_NONE) const;
+
 	HMODULE _inputModuleHandle = nullptr;
 	LPVOID _createInputHook = nullptr;
 	TComPtr<CInputPatched> _input;

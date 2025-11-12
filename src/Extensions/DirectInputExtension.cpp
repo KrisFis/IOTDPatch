@@ -87,6 +87,139 @@ SString ToString(EInputDeviceType type)
 	}
 }
 
+SString ToString(EInputKey type, EInputDeviceType deviceType)
+{
+	switch (deviceType)
+	{
+		case EInputDeviceType::Mouse:
+			switch (type)
+			{
+				case EInputKey::MouseX: return TEXT("MouseX");
+				case EInputKey::MouseY: return TEXT("MouseY");
+				case EInputKey::MouseZ: return TEXT("MouseZ");
+				case EInputKey::MouseButtonZero: return TEXT("MouseButtonZero");
+				case EInputKey::MouseButtonOne: return TEXT("MouseButtonOne");
+				case EInputKey::MouseButtonTwo: return TEXT("MouseButtonTwo");
+				case EInputKey::MouseButtonThree: return TEXT("MouseButtonThree");
+				case EInputKey::MouseButtonFour: return TEXT("MouseButtonFour");
+				case EInputKey::MouseButtonFive: return TEXT("MouseButtonFive");
+				case EInputKey::MouseButtonSix: return TEXT("MouseButtonSix");
+				case EInputKey::MouseButtonSeven: return TEXT("MouseButtonSeven");
+				default: break;
+			}
+			break;
+		case EInputDeviceType::Keyboard:
+			switch (type)
+			{
+				case EInputKey::Q: return TEXT("Q");
+				case EInputKey::W: return TEXT("W");
+				case EInputKey::E: return TEXT("E");
+				case EInputKey::R: return TEXT("R");
+				case EInputKey::T: return TEXT("T");
+				case EInputKey::Y: return TEXT("Y");
+				case EInputKey::U: return TEXT("U");
+				case EInputKey::I: return TEXT("I");
+				case EInputKey::O: return TEXT("O");
+				case EInputKey::P: return TEXT("P");
+				case EInputKey::A: return TEXT("A");
+				case EInputKey::S: return TEXT("S");
+				case EInputKey::D: return TEXT("D");
+				case EInputKey::F: return TEXT("F");
+				case EInputKey::G: return TEXT("G");
+				case EInputKey::H: return TEXT("H");
+				case EInputKey::J: return TEXT("J");
+				case EInputKey::K: return TEXT("K");
+				case EInputKey::L: return TEXT("L");
+				case EInputKey::Z: return TEXT("Z");
+				case EInputKey::X: return TEXT("X");
+				case EInputKey::C: return TEXT("C");
+				case EInputKey::V: return TEXT("V");
+				case EInputKey::B: return TEXT("B");
+				case EInputKey::N: return TEXT("N");
+				case EInputKey::M: return TEXT("M");
+				case EInputKey::F1: return TEXT("F1");
+				case EInputKey::F2: return TEXT("F2");
+				case EInputKey::F3: return TEXT("F3");
+				case EInputKey::F4: return TEXT("F4");
+				case EInputKey::F5: return TEXT("F5");
+				case EInputKey::F6: return TEXT("F6");
+				case EInputKey::F7: return TEXT("F7");
+				case EInputKey::F8: return TEXT("F8");
+				case EInputKey::F9: return TEXT("F9");
+				case EInputKey::F10: return TEXT("F10");
+				case EInputKey::F11: return TEXT("F11");
+				case EInputKey::F12: return TEXT("F12");
+				case EInputKey::Escape: return TEXT("Escape");
+				case EInputKey::One: return TEXT("One");
+				case EInputKey::Two: return TEXT("Two");
+				case EInputKey::Three: return TEXT("Three");
+				case EInputKey::Four: return TEXT("Four");
+				case EInputKey::Five: return TEXT("Five");
+				case EInputKey::Six: return TEXT("Six");
+				case EInputKey::Seven: return TEXT("Seven");
+				case EInputKey::Eight: return TEXT("Eight");
+				case EInputKey::Nine: return TEXT("Nine");
+				case EInputKey::Zero: return TEXT("Zero");
+				case EInputKey::Minus: return TEXT("Minus");
+				case EInputKey::Equals: return TEXT("Equals");
+				case EInputKey::Back: return TEXT("Back");
+				case EInputKey::Tab: return TEXT("Tab");
+				case EInputKey::Semicolon: return TEXT("Semicolon");
+				case EInputKey::Apostrophe: return TEXT("Apostrophe");
+				case EInputKey::Grave: return TEXT("Grave");
+				case EInputKey::LeftShift: return TEXT("LeftShift");
+				case EInputKey::Backslash: return TEXT("Backslash");
+				case EInputKey::Comma: return TEXT("Comma");
+				case EInputKey::Period: return TEXT("Period");
+				case EInputKey::Slash: return TEXT("Slash");
+				case EInputKey::RightShift: return TEXT("RightShift");
+				case EInputKey::Multiply: return TEXT("Multiply");
+				case EInputKey::LeftMenu: return TEXT("LeftMenu");
+				case EInputKey::Space: return TEXT("Space");
+				case EInputKey::Capital: return TEXT("Capital");
+				case EInputKey::LeftBracket: return TEXT("LeftBracket");
+				case EInputKey::RightBracket: return TEXT("RightBracket");
+				case EInputKey::Return: return TEXT("Return");
+				case EInputKey::LeftControl: return TEXT("LeftControl");
+				case EInputKey::NumpadSeven: return TEXT("NumpadSeven");
+				case EInputKey::NumpadEight: return TEXT("NumpadEight");
+				case EInputKey::NumpadNine: return TEXT("NumpadNine");
+				case EInputKey::Subtract: return TEXT("Subtract");
+				case EInputKey::NumpadFour: return TEXT("NumpadFour");
+				case EInputKey::NumpadFive: return TEXT("NumpadFive");
+				case EInputKey::NumpadSix: return TEXT("NumpadSix");
+				case EInputKey::NumpadAdd: return TEXT("NumpadAdd");
+				case EInputKey::NumpadOne: return TEXT("NumpadOne");
+				case EInputKey::NumpadTwo: return TEXT("NumpadTwo");
+				case EInputKey::NumpadThree: return TEXT("NumpadThree");
+				case EInputKey::NumpadZero: return TEXT("NumpadZero");
+				case EInputKey::Decimal: return TEXT("Decimal");
+				case EInputKey::NumpadEquals: return TEXT("NumpadEquals");
+				case EInputKey::NumpadEnter: return TEXT("NumpadEnter");
+				case EInputKey::RightControl: return TEXT("RightControl");
+				case EInputKey::NumpadComma: return TEXT("NumpadComma");
+				case EInputKey::NumpadDivide: return TEXT("NumpadDivide");
+				case EInputKey::RightAlt: return TEXT("RightAlt");
+				case EInputKey::Pause: return TEXT("Pause");
+				case EInputKey::Home: return TEXT("Home");
+				case EInputKey::Up: return TEXT("Up");
+				case EInputKey::PageUp: return TEXT("PageUp");
+				case EInputKey::Left: return TEXT("Left");
+				case EInputKey::Right: return TEXT("Right");
+				case EInputKey::End: return TEXT("End");
+				case EInputKey::Down: return TEXT("Down");
+				case EInputKey::Next: return TEXT("Next");
+				case EInputKey::Insert: return TEXT("Insert");
+				case EInputKey::Delete: return TEXT("Delete");
+				default: break;
+			}
+			break;
+		default: break;
+	}
+
+	return TEXT("Unknown");
+}
+
 SString ToString(const GUID& guid)
 {
 	return SString::Printf(TEXT("{%08lX-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}"),
@@ -201,6 +334,47 @@ HRESULT CInputDevicePatched::SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCST
 	return result;
 }
 
+void CInputDevicePatched::PrintActiveActionMap() const
+{
+	if (_activeMapId.empty())
+	{
+		LogInfo(TEXT("CInputDevicePatched%s: No active action map"),
+			*_typeAsStr,
+			_activeMapId.c_str()
+		);
+
+		return;
+	}
+
+	const auto* foundMap = _maps.Find(_activeMapId);
+	if (!foundMap)
+	{
+		LogWarning(TEXT("CInputDevicePatched%s: Action Map '%s' not found:"),
+			*_typeAsStr,
+			_activeMapId.c_str()
+		);
+
+		return;
+	}
+
+	LogInfo(TEXT("CInputDevicePatched%s: Active Action Map '%s':"),
+		*_typeAsStr,
+		_activeMapId.c_str()
+	);
+
+	SString actionsAsStr = SString::GetEmpty();
+
+	const DIACTIONFORMAT& mf = foundMap->GetData();
+	for (DWORD i = 0; i < mf.dwNumActions; ++i)
+	{
+		const auto& action = mf.rgoAction[i];
+		LogInfo(TEXT("%s: %d"),
+			action.lptszActionName,
+			action.dwObjID
+		);
+	}
+}
+
 CInputPatched::CInputPatched(IDirectInput8A* impl)
 	: Super(impl)
 {
@@ -275,8 +449,50 @@ void CDirectInputExtension::Initialize()
 	}
 }
 
+void CDirectInputExtension::Tick(double deltaTime)
+{
+#if BUILD_DEBUG
+	if (GetAsyncKeyState(VK_NUMPAD0)) PrintActiveMapping();
+	else if (GetAsyncKeyState(VK_NUMPAD1)) PrintActiveMapping(0);
+	else if (GetAsyncKeyState(VK_NUMPAD2)) PrintActiveMapping(1);
+	else if (GetAsyncKeyState(VK_NUMPAD3)) PrintActiveMapping(2);
+	else if (GetAsyncKeyState(VK_NUMPAD4)) PrintActiveMapping(3);
+	else if (GetAsyncKeyState(VK_NUMPAD5)) PrintActiveMapping(4);
+	else if (GetAsyncKeyState(VK_NUMPAD6)) PrintActiveMapping(5);
+	else if (GetAsyncKeyState(VK_NUMPAD7)) PrintActiveMapping(6);
+	else if (GetAsyncKeyState(VK_NUMPAD8)) PrintActiveMapping(7);
+	else if (GetAsyncKeyState(VK_NUMPAD9)) PrintActiveMapping(8);
+#endif
+}
+
 void CDirectInputExtension::Shutdown()
 {
 	CHECK(MH_RemoveHook(_createInputHook) == MH_OK);
 	Super::Shutdown();
+}
+
+void CDirectInputExtension::PrintActiveMapping(const int32 deviceIdx) const
+{
+	if (!_input.IsValid()) return;
+
+	const auto& devicesMap = _input->GetDevices();
+
+	LogInfo(TEXT("--------------- BEGIN Print Active Mapping ---------------"));
+
+	if (deviceIdx >= 0)
+	{
+		if (auto* device = devicesMap.FindByIndex(deviceIdx))
+		{
+			(*device)->PrintActiveActionMap();
+		}
+	}
+	else
+	{
+		for (const auto& device : devicesMap.GetValues())
+		{
+			device->PrintActiveActionMap();
+		}
+	}
+
+	LogInfo(TEXT("--------------- END Print Active Mapping -------------------------------"));
 }

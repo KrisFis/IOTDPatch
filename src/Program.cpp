@@ -106,11 +106,6 @@ namespace _NProgram
 
 	void MainTick(double deltaTime)
 	{
-		// if (GetAsyncKeyState(VK_NUMPAD0))
-		// {
-		// 	std::cout << "Hello World!" << std::endl;
-		// }
-
 		for (IProgramExtension* extension : NProgram::Extensions::GetAll())
 		{
 			extension->Tick(deltaTime);

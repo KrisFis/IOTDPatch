@@ -95,7 +95,7 @@ struct SInputDeviceMap
 	SInputDeviceMap() = default;
 	FORCEINLINE SInputDeviceMap(const DIACTIONFORMAT& other) { InitializeAs(other); }
 
-	FORCEINLINE bool IsValid() const { return _data.dwSize > 0; }
+	FORCEINLINE bool IsValid() const { return _data.dwSize > 0 && !_data.rgoAction; }
 
 	FORCEINLINE SInputDeviceMap(const SInputDeviceMap& other) { InitializeAs(other._data); }
 	FORCEINLINE SInputDeviceMap& operator=(const SInputDeviceMap& other) { InitializeAs(other._data); return *this; }

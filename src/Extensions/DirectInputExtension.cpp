@@ -98,7 +98,7 @@ SString ToString(const GUID& guid)
 
 void SInputDeviceMap::Reset()
 {
-	if (_data.dwSize == 0) return;
+	if (_data.dwSize == 0 && !_data.rgoAction) return;
 
 	if (_data.rgoAction)
 	{

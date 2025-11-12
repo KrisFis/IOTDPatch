@@ -7,7 +7,7 @@
 #include <iostream>
 
 template<typename Fmt, typename... ArgsT>
-FORCENOINLINE void LogDebug(Fmt&& fmt, ArgsT&&... args)
+FORCEINLINE void LogDebug(Fmt&& fmt, ArgsT&&... args)
 {
 #if BUILD_DEBUG
 	std::cout << "DEBUG: " << *SString::Printf(fmt, Forward<ArgsT>(args)...) << std::endl;
@@ -15,13 +15,13 @@ FORCENOINLINE void LogDebug(Fmt&& fmt, ArgsT&&... args)
 }
 
 template<typename Fmt, typename... ArgsT>
-FORCENOINLINE void LogInfo(Fmt&& fmt, ArgsT&&... args)
+FORCEINLINE void LogInfo(Fmt&& fmt, ArgsT&&... args)
 {
 	std::cout << *SString::Printf(fmt, Forward<ArgsT>(args)...) << std::endl;
 }
 
 template<typename Fmt, typename... ArgsT>
-FORCENOINLINE void LogWarning(Fmt&& fmt, ArgsT&&... args)
+FORCEINLINE void LogWarning(Fmt&& fmt, ArgsT&&... args)
 {
 	std::cout << "WARNING: " << *SString::Printf(fmt, Forward<ArgsT>(args)...) << std::endl;
 }

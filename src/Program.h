@@ -6,6 +6,26 @@
 
 #include <iostream>
 
+template<typename Fmt, typename... ArgsT>
+FORCENOINLINE void LogDebug(Fmt&& fmt, ArgsT&&... args)
+{
+#if BUILD_DEBUG
+	std::cout << "DEBUG: " << *SString::Printf(fmt, Forward<ArgsT>(args)...) << std::endl;
+#endif
+}
+
+template<typename Fmt, typename... ArgsT>
+FORCENOINLINE void LogInfo(Fmt&& fmt, ArgsT&&... args)
+{
+	std::cout << *SString::Printf(fmt, Forward<ArgsT>(args)...) << std::endl;
+}
+
+template<typename Fmt, typename... ArgsT>
+FORCENOINLINE void LogWarning(Fmt&& fmt, ArgsT&&... args)
+{
+	std::cout << "WARNING: " << *SString::Printf(fmt, Forward<ArgsT>(args)...) << std::endl;
+}
+
 std::string ToUTF8(const wchar_t* wstr);
 std::wstring ToWChar(const char* str);
 
@@ -22,10 +42,18 @@ FORCEINLINE std::string SStringToStd(const SString& str)
 
 namespace NProgram
 {
+	HMODULE GetEXEHandle();
+	HMODULE GetDLLHandle();
+
 	void WaitForDebugger();
-	
+
 	bool IsShutdownRequested();
 	void RequestShutdown(const SString& reason = SString::GetEmpty());
 
+}
+
+namespace _NProgram
+{
+	void Init(HMODULE DLLHandle);
 	int32 Main();
 }

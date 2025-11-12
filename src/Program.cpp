@@ -71,8 +71,15 @@ std::wstring ToWChar(const char* str)
 namespace _NProgram
 {
 	std::atomic GShutdownRequested = false;
+	HMODULE GExeHandle = nullptr;
+	HMODULE GDLLHandle = nullptr;
 
-	bool Init()
+	void Init(HMODULE DLLHandle)
+	{
+		GDLLHandle = DLLHandle;
+	}
+
+	bool MainInit()
 	{
 		if (!CHECK(MH_Initialize() == MH_OK))
 		{
@@ -87,7 +94,7 @@ namespace _NProgram
 		return true;
 	}
 
-	void Shutdown()
+	void MainShutdown()
 	{
 		for (IProgramExtension* extension : NProgram::Extensions::GetAll())
 		{
@@ -97,7 +104,7 @@ namespace _NProgram
 		MH_Uninitialize();
 	}
 
-	void Tick(double deltaTime)
+	void MainTick(double deltaTime)
 	{
 		// if (GetAsyncKeyState(VK_NUMPAD0))
 		// {
@@ -109,11 +116,58 @@ namespace _NProgram
 			extension->Tick(deltaTime);
 		}
 	}
+
+	int32 Main()
+	{
+		if (const bool initResult = MainInit(); !initResult)
+		{
+			MainShutdown();
+			return EXIT_FAILURE;
+		}
+
+		constexpr double TICKS_PER_SECOND = 10.0;
+		constexpr std::chrono::duration<double> TICKS_DURATION(1.0 / TICKS_PER_SECOND);
+
+		auto previous = std::chrono::steady_clock::now();
+		while (!GShutdownRequested.load())
+		{
+			auto loopStart = std::chrono::steady_clock::now();
+
+			std::chrono::duration<double> delta = loopStart - previous;
+			previous = loopStart;
+
+			MainTick(delta.count());
+
+			auto loopEnd = std::chrono::steady_clock::now();
+			auto elapsed = loopEnd - loopStart;
+
+			if (elapsed < TICKS_DURATION)
+				std::this_thread::sleep_for(TICKS_DURATION - elapsed);
+		}
+
+		MainShutdown();
+		return EXIT_SUCCESS;
+	}
 }
 
 namespace NProgram
 {
 	using namespace _NProgram;
+
+	HMODULE GetEXEHandle()
+	{
+		if (!GExeHandle)
+		{
+			GExeHandle = GetModuleHandle(nullptr);
+		}
+
+		return GExeHandle;
+	}
+
+	HMODULE GetDLLHandle()
+	{
+		return GDLLHandle;
+	}
 
 	void WaitForDebugger()
 	{
@@ -131,37 +185,5 @@ namespace NProgram
 	void RequestShutdown(const SString& reason)
 	{
 		GShutdownRequested.store(true);
-	}
-
-	int32 Main()
-	{
-		if (const bool initResult = Init(); !initResult)
-		{
-			Shutdown();
-			return EXIT_FAILURE;
-		}
-
-		constexpr double TICKS_PER_SECOND = 10.0;
-		constexpr std::chrono::duration<double> TICKS_DURATION(1.0 / TICKS_PER_SECOND);
-
-		auto previous = std::chrono::steady_clock::now();
-		while (!GShutdownRequested.load())
-		{
-			auto loopStart = std::chrono::steady_clock::now();
-
-			std::chrono::duration<double> delta = loopStart - previous;
-			previous = loopStart;
-
-			Tick(delta.count());
-
-			auto loopEnd = std::chrono::steady_clock::now();
-			auto elapsed = loopEnd - loopStart;
-
-			if (elapsed < TICKS_DURATION)
-				std::this_thread::sleep_for(TICKS_DURATION - elapsed);
-		}
-
-		Shutdown();
-		return EXIT_SUCCESS;
 	}
 }

@@ -29,6 +29,75 @@
 	private:\
 	Base* _impl = nullptr;
 
+// Ptr to COM object
+template<typename ComT>
+class TComPtr
+{
+public:
+	typedef ComT ComType;
+
+	static_assert(TIsDerivedFrom<ComType, IUnknown>::Value, "COM type has to be derived from IUnknown");
+
+	TComPtr() = default;
+	// if "makeOwner" is TRUE, then caller doesn't have to call 'release'
+	FORCEINLINE TComPtr(ComType* object, bool makeOwner = false) { InitializeFrom(object, makeOwner); }
+
+	FORCEINLINE TComPtr(const TComPtr& other) { CopyFrom(other); }
+	FORCEINLINE TComPtr& operator=(const TComPtr& other) { CopyFrom(other); return *this; }
+
+	FORCEINLINE TComPtr(TComPtr&& other) noexcept { MoveFrom(Move(other)); }
+	FORCEINLINE TComPtr& operator=(TComPtr&& other) noexcept { MoveFrom(Move(other)); return *this; }
+
+	FORCEINLINE bool operator==(const TComPtr& other) const { return other._object == _object; }
+	FORCEINLINE bool operator!=(const TComPtr& other) const { return !operator==(other); }
+
+	FORCEINLINE bool IsValid() const { return !!_object; }
+	FORCEINLINE ComType* Get() const { return _object; }
+
+	FORCEINLINE ComType* operator->() const { return _object; }
+	FORCEINLINE ComType& operator*() const { return *_object; }
+
+	void Reset(ComType* object = nullptr, bool makeOwner = false)
+	{
+		if (_object)
+		{
+			_object->Release();
+			_object = nullptr;
+		}
+
+		InitializeFrom(object, makeOwner);
+	}
+
+private:
+	void InitializeFrom(ComType* object, bool makeOwner)
+	{
+		if (!object) return;
+
+		_object = object;
+		if (!makeOwner)
+		{
+			_object->AddRef();
+		}
+	}
+
+	void MoveFrom(TComPtr&& other)
+	{
+		if (this == &other) return;
+
+		Reset();
+		_object = other._object;
+		other._object = nullptr;
+	}
+
+	void CopyFrom(const TComPtr& other)
+	{
+		if (this == &other) return;
+		Reset(other._object, false);
+	}
+
+	ComType* _object = nullptr;
+};
+
 // Provides methods to interact with a specific input device (keyboard, mouse, joystick, etc.),
 // manage device state, acquire/release input, and handle force feedback.
 class CDirectInputDevice8Proxy : public IDirectInputDevice8

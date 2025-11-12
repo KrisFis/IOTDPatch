@@ -25,7 +25,7 @@ file(GLOB_RECURSE SOURCES ${SOURCE_DIRS}/*.cpp)
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${DEPS_ROOT}/ASTD/include)
-target_link_libraries(${PROJECT_NAME} PRIVATE minhook dinput8)
+target_link_libraries(${PROJECT_NAME} PRIVATE minhook dinput8 dxguid)
 target_link_options(${PROJECT_NAME} PRIVATE /LTCG)
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 	$<$<CONFIG:Debug>:BUILD_DEBUG=1>

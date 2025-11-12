@@ -13,7 +13,9 @@ DWORD WINAPI DllThreadUnload(LPVOID lpParameter)
 
 DWORD WINAPI DllThreadMain(LPVOID)
 {
-	NProgram::Main();
+	_NProgram::Init(GModule);
+	_NProgram::Main();
+
 	CreateThread(nullptr, 0, DllThreadUnload, nullptr, 0 , nullptr);
 	return EXIT_SUCCESS;
 }

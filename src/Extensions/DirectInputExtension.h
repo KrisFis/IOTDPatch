@@ -5,42 +5,95 @@
 #include "ProgramExtension.h"
 #include "DirectInput.h"
 
+enum class EInputDeviceType : uint8
+{
+	None = 0,
+
+	Device = DI8DEVTYPE_DEVICE,
+	Mouse = DI8DEVTYPE_MOUSE,
+	Keyboard = DI8DEVTYPE_KEYBOARD,
+	Joystick = DI8DEVTYPE_JOYSTICK,
+	Gamepad = DI8DEVTYPE_GAMEPAD,
+	Driving = DI8DEVTYPE_DRIVING,
+	Flight = DI8DEVTYPE_FLIGHT,
+	FirstPerson = DI8DEVTYPE_1STPERSON,
+	DeviceCtrl = DI8DEVTYPE_DEVICECTRL,
+	ScreenPointer = DI8DEVTYPE_SCREENPOINTER,
+	Remote = DI8DEVTYPE_REMOTE,
+	Supplemental = DI8DEVTYPE_SUPPLEMENTAL,
+};
+
+SString ToString(EInputDeviceType type);
+SString ToString(const GUID& guid);
+
 class CInputDevicePatched final : public CDirectInputDevice8Proxy
 {
 public:
 	typedef CDirectInputDevice8Proxy Super;
-	using Super::Super;
+
+	CInputDevicePatched(IDirectInputDevice8* impl, const DIDEVICEINSTANCE& data);
+
+	FORCEINLINE const GUID& GetId() const { return _data.guidInstance; }
+	FORCEINLINE const SString& GetIdString() const { return _idAsStr; }
+	FORCEINLINE const DIDEVICEINSTANCE& GetData() const { return _data; }
+
+	STDOVERRIDEMETHODIMP_(ULONG) AddRef();
+	STDOVERRIDEMETHODIMP_(ULONG) Release();
 
 	STDOVERRIDEMETHODIMP GetDeviceState(DWORD cbData, LPVOID lpvData);
 	STDOVERRIDEMETHODIMP GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags);
 	STDOVERRIDEMETHODIMP BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags);
 	STDOVERRIDEMETHODIMP SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags);
+
+private:
+	EInputDeviceType _type = EInputDeviceType::None;
+
+	SString _idAsStr;
+	DIDEVICEINSTANCE _data;
+
+	struct
+	{
+		TOptional<DIACTIONFORMAT> Format;
+		uint8 Saved : 1 = false;
+	} _map;
 };
 
 class CInputPatched final : public CDirectInput8Proxy
 {
 public:
 	typedef CDirectInput8Proxy Super;
-	using Super::Super;
+
+	CInputPatched(IDirectInput8* impl);
+
+	STDOVERRIDEMETHODIMP_(ULONG) AddRef();
+	STDOVERRIDEMETHODIMP_(ULONG) Release();
 
 	STDOVERRIDEMETHODIMP CreateDevice(REFGUID rguid, LPDIRECTINPUTDEVICE8* lplpDirectInputDevice, LPUNKNOWN pUnkOuter);
 	STDOVERRIDEMETHODIMP EnumDevices(DWORD dwDevType, LPDIENUMDEVICESCALLBACK lpCallback, LPVOID pvRef, DWORD dwFlags);
 	STDOVERRIDEMETHODIMP EnumDevicesBySemantics(LPCSTR pszUserName, LPDIACTIONFORMAT lpActionFormat, LPDIENUMDEVICESBYSEMANTICSCB lpCallback, LPVOID pvRef, DWORD dwFlags);
+
+private:
+	friend BOOL CALLBACK HandleEnumDevices(const DIDEVICEINSTANCE* pdidInstance, VOID* pvRef);
+	TArray<TComPtr<CInputDevicePatched>> _devices;
 };
 
 class CDirectInputExtension final : public IProgramExtension 
 {
 public:
 	typedef IProgramExtension Super;
-	
+
+	FORCEINLINE const TComPtr<CInputPatched>& GetCOM() const { return _input; }
+
 	// ~BEGIN IProgramExtension interface
 	virtual void Initialize() override;
 	virtual void Tick(double deltaTime) override {}
 	virtual void Shutdown() override;
 	// ~END IProgramExtension interface
 
-	HMODULE DInput8Handle = nullptr;
-	TArray<LPVOID> Hooks;
+private:
+	HMODULE _inputModuleHandle = nullptr;
+	LPVOID _createInputHook = nullptr;
+	TComPtr<CInputPatched> _input;
 };
 
 DECLARE_EXTENSION(CDirectInputExtension)

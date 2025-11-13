@@ -2,6 +2,7 @@
 
 #include "ProgramExtension.h"
 
+#include <algorithm>
 #include <mutex>
 
 struct SExtensions

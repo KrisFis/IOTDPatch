@@ -12,7 +12,7 @@ public:
 	virtual ~IProgramExtension() = default;
 
 	FORCEINLINE bool IsInitialized() const { return _isInitialized; }
-	
+
 	virtual void Initialize() { _isInitialized = true; }
 	virtual void Tick(double deltaTime) {}
 	virtual void Shutdown() { _isInitialized = false; }
@@ -41,12 +41,12 @@ namespace NProgram::Extensions
 {
 	template<typename T>
 	FORCEINLINE T* Get() { return _NProgram::Extensions::TGet<T>::Get(); }
-	
+
 	TArray<IProgramExtension*> GetAll();
 }
 
 #define DECLARE_EXTENSION(ClassType)																	\
-namespace _NProgram::Extensions																					\
+namespace _NProgram::Extensions																			\
 {																										\
 	template<> struct TGet<ClassType>																	\
 	{																									\

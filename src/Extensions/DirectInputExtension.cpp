@@ -5,7 +5,17 @@
 #include "MinHook.h"
 #include "Program.h"
 
-BOOL CALLBACK HandleEnumDevices(const DIDEVICEINSTANCE* pdidInstance, void* pvRef)
+BOOL CALLBACK HandleEnumDeviceObjects(LPCDIDEVICEOBJECTINSTANCE pdidInstance, VOID* pvRef)
+{
+	if (!pdidInstance) return DIENUM_CONTINUE;
+
+	CInputDevicePatched* owner = (CInputDevicePatched*)pvRef;
+	owner->_objects[pdidInstance->dwType] = *pdidInstance;
+
+	return DIENUM_CONTINUE;
+}
+
+BOOL CALLBACK HandleEnumDevices(LPCDIDEVICEINSTANCE pdidInstance, void* pvRef)
 {
 	if (!pdidInstance) return DIENUM_CONTINUE;
 
@@ -55,14 +65,14 @@ BOOL CALLBACK HandleEnumDevices(const DIDEVICEINSTANCE* pdidInstance, void* pvRe
 HRESULT WINAPI HandleDirectInput8Create(HINSTANCE hinst, DWORD dwVersion, REFIID riidltf, LPVOID* ppvOut, LPUNKNOWN punkOuter)
 {
 	const CDirectInputExtension* ext = NProgram::Extensions::Get<CDirectInputExtension>();
-	if (!ext->GetCOM().IsValid())
+	if (!ext->GetInput().IsValid())
 	{
 		LogWarning(TEXT("CInputPatched: Can't find input"));
 		return S_FALSE;
 	}
 
-	*ppvOut = ext->GetCOM().Get();
-	ext->GetCOM()->AddRef(); // since we are exposing, we need to add ref
+	*ppvOut = ext->GetInput().Get();
+	ext->GetInput()->AddRef(); // since we are exposing, we need to add ref
 
 	return S_OK;
 }
@@ -229,21 +239,15 @@ SString ToString(const GUID& guid)
 	);
 }
 
-void SInputDeviceMap::Reset()
+void SInputDeviceMap::Reset(const DIACTIONFORMAT& data)
 {
-	if (_data.dwSize == 0 && !_data.rgoAction) return;
-
-	if (_data.rgoAction)
+	if (IsValid())
 	{
-		SMemory::Free(_data.rgoAction);
+		if (_data.rgoAction)
+		{
+			SMemory::Free(_data.rgoAction);
+		}
 	}
-
-	_data = DIACTIONFORMAT();
-}
-
-void SInputDeviceMap::InitializeAs(const DIACTIONFORMAT& data)
-{
-	Reset();
 
 	_data = data;
 	if (data.rgoAction)
@@ -260,7 +264,13 @@ CInputDevicePatched::CInputDevicePatched(IDirectInputDevice8A* impl, const DIDEV
 	, _idAsStr(ToString(data.guidInstance))
 	, _typeAsStr(ToString(_type))
 	, _data(data)
-{}
+{
+	const HRESULT result = impl->EnumObjects(HandleEnumDeviceObjects, this, DIDFT_ALL);
+	if (!CHECK(SUCCEEDED(result)))
+	{
+		LogWarning(TEXT("CInputDevicePatched: Could not evaluate objects !"));
+	}
+}
 
 HRESULT CInputDevicePatched::GetDeviceState(DWORD cbData, LPVOID lpvData)
 {
@@ -274,7 +284,7 @@ HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTD
 
 HRESULT CInputDevicePatched::BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
 {
-	SInputDeviceMap& mapFormat = _maps.FindOrAdd(lpActionFormat->tszActionMap);
+	SInputDeviceMap& mapFormat = _actionMaps.FindOrAdd(lpActionFormat->tszActionMap);
 	if (mapFormat.IsValid())
 	{
 		*lpActionFormat = mapFormat;
@@ -306,7 +316,7 @@ HRESULT CInputDevicePatched::BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPC
 
 HRESULT CInputDevicePatched::SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
 {
-	if (!(dwFlags & DIDSAM_FORCESAVE) && _activeMapId.compare(lpActionFormat->tszActionMap) == 0)
+	if (!(dwFlags & DIDSAM_FORCESAVE) && _activeActionMapId.compare(lpActionFormat->tszActionMap) == 0)
 	{
 		return S_OK;
 	}
@@ -323,7 +333,7 @@ HRESULT CInputDevicePatched::SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCST
 		return result;
 	}
 
-	_activeMapId = lpActionFormat->tszActionMap;
+	_activeActionMapId = lpActionFormat->tszActionMap;
 	LogInfo(TEXT("CInputDevicePatched%s %s: Map '%s' applied for '%s'"), 
 		*_typeAsStr,
 		BUILD_DEBUG ? *_idAsStr : "",
@@ -336,30 +346,30 @@ HRESULT CInputDevicePatched::SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCST
 
 void CInputDevicePatched::PrintActiveActionMap() const
 {
-	if (_activeMapId.empty())
+	if (_activeActionMapId.empty())
 	{
 		LogInfo(TEXT("CInputDevicePatched%s: No active action map"),
 			*_typeAsStr,
-			_activeMapId.c_str()
+			_activeActionMapId.c_str()
 		);
 
 		return;
 	}
 
-	const auto* foundMap = _maps.Find(_activeMapId);
+	const auto* foundMap = _actionMaps.Find(_activeActionMapId);
 	if (!foundMap)
 	{
 		LogWarning(TEXT("CInputDevicePatched%s: Action Map '%s' not found:"),
 			*_typeAsStr,
-			_activeMapId.c_str()
+			_activeActionMapId.c_str()
 		);
 
 		return;
 	}
 
-	LogInfo(TEXT("CInputDevicePatched%s: Active Action Map '%s':"),
-		*_typeAsStr,
-		_activeMapId.c_str()
+	LogInfo(TEXT("--------------- %s (%s) ---------------"),
+		_activeActionMapId.c_str(),
+		*_typeAsStr
 	);
 
 	SString actionsAsStr = SString::GetEmpty();
@@ -368,10 +378,16 @@ void CInputDevicePatched::PrintActiveActionMap() const
 	for (DWORD i = 0; i < mf.dwNumActions; ++i)
 	{
 		const auto& action = mf.rgoAction[i];
-		LogInfo(TEXT("%s: %d"),
-			action.lptszActionName,
-			action.dwObjID
-		);
+		if (!InlineIsEqualGUID(GetId(), action.guidInstance)) continue;
+
+		SString keyName = TEXT("<None>");
+		if (const auto& it = _objects.find(action.dwObjID);
+			it != _objects.end())
+		{
+			keyName = it->second.tszName;
+		}
+
+		LogInfo(TEXT("%s: %s"), action.lptszActionName, *keyName);
 	}
 }
 
@@ -424,6 +440,32 @@ HRESULT CInputPatched::EnumDevicesBySemantics(LPCSTR pszUserName, LPDIACTIONFORM
 	return S_OK;
 }
 
+void CDirectInputExtension::PrintActiveActionMaps(const int32 deviceIdx) const
+{
+	if (!_input.IsValid()) return;
+
+	const auto& devicesMap = _input->GetDevices();
+
+	LogInfo(TEXT("--------------- BEGIN Print Active Action Map ---------------"));
+
+	if (deviceIdx >= 0)
+	{
+		if (auto* device = devicesMap.FindByIndex(deviceIdx))
+		{
+			(*device)->PrintActiveActionMap();
+		}
+	}
+	else
+	{
+		for (const auto& device : devicesMap.GetValues())
+		{
+			device->PrintActiveActionMap();
+		}
+	}
+
+	LogInfo(TEXT("--------------- END Print Active Action Map ---------------"));
+}
+
 void CDirectInputExtension::Initialize()
 {
 	Super::Initialize();
@@ -449,50 +491,8 @@ void CDirectInputExtension::Initialize()
 	}
 }
 
-void CDirectInputExtension::Tick(double deltaTime)
-{
-#if BUILD_DEBUG
-	if (GetAsyncKeyState(VK_NUMPAD0)) PrintActiveMapping();
-	else if (GetAsyncKeyState(VK_NUMPAD1)) PrintActiveMapping(0);
-	else if (GetAsyncKeyState(VK_NUMPAD2)) PrintActiveMapping(1);
-	else if (GetAsyncKeyState(VK_NUMPAD3)) PrintActiveMapping(2);
-	else if (GetAsyncKeyState(VK_NUMPAD4)) PrintActiveMapping(3);
-	else if (GetAsyncKeyState(VK_NUMPAD5)) PrintActiveMapping(4);
-	else if (GetAsyncKeyState(VK_NUMPAD6)) PrintActiveMapping(5);
-	else if (GetAsyncKeyState(VK_NUMPAD7)) PrintActiveMapping(6);
-	else if (GetAsyncKeyState(VK_NUMPAD8)) PrintActiveMapping(7);
-	else if (GetAsyncKeyState(VK_NUMPAD9)) PrintActiveMapping(8);
-#endif
-}
-
 void CDirectInputExtension::Shutdown()
 {
 	CHECK(MH_RemoveHook(_createInputHook) == MH_OK);
 	Super::Shutdown();
-}
-
-void CDirectInputExtension::PrintActiveMapping(const int32 deviceIdx) const
-{
-	if (!_input.IsValid()) return;
-
-	const auto& devicesMap = _input->GetDevices();
-
-	LogInfo(TEXT("--------------- BEGIN Print Active Mapping ---------------"));
-
-	if (deviceIdx >= 0)
-	{
-		if (auto* device = devicesMap.FindByIndex(deviceIdx))
-		{
-			(*device)->PrintActiveActionMap();
-		}
-	}
-	else
-	{
-		for (const auto& device : devicesMap.GetValues())
-		{
-			device->PrintActiveActionMap();
-		}
-	}
-
-	LogInfo(TEXT("--------------- END Print Active Mapping -------------------------------"));
 }

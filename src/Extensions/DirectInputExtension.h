@@ -219,23 +219,23 @@ private:
 struct SInputDeviceMap
 {
 	SInputDeviceMap() = default;
-	FORCEINLINE SInputDeviceMap(const DIACTIONFORMAT& other) { InitializeAs(other); }
-
-	FORCEINLINE bool IsValid() const { return _data.dwSize > 0 && !_data.rgoAction; }
-
-	FORCEINLINE SInputDeviceMap(const SInputDeviceMap& other) { InitializeAs(other._data); }
-	FORCEINLINE SInputDeviceMap& operator=(const SInputDeviceMap& other) { InitializeAs(other._data); return *this; }
-
+	FORCEINLINE SInputDeviceMap(const DIACTIONFORMAT& other) { Reset(other); }
 	FORCEINLINE ~SInputDeviceMap() { Reset(); }
+
+	FORCEINLINE bool IsValid() const { return _data.dwSize > 0 && _data.dwActionSize > 0; }
+
+	FORCEINLINE SInputDeviceMap(const SInputDeviceMap& other) { Reset(other._data); }
+	FORCEINLINE SInputDeviceMap& operator=(const SInputDeviceMap& other) { Reset(other._data); return *this; }
+
+	FORCEINLINE const DIACTIONFORMAT* operator->() const { return &_data; }
+	FORCEINLINE const DIACTIONFORMAT& operator*() const { return _data; }
 
 	FORCEINLINE const DIACTIONFORMAT& GetData() const { return _data; }
 	FORCEINLINE operator const DIACTIONFORMAT&() const { return _data; }
 
-	void Reset();
+	void Reset(const DIACTIONFORMAT& data = {});
 
 private:
-	void InitializeAs(const DIACTIONFORMAT& data);
-
 	DIACTIONFORMAT _data = DIACTIONFORMAT();
 };
 
@@ -246,8 +246,8 @@ public:
 
 	CInputDevicePatched(IDirectInputDevice8* impl, const DIDEVICEINSTANCE& data);
 
-	FORCEINLINE const std::string& GetActiveActionMap() const { return _activeMapId; }
-	FORCEINLINE const TFastMap<std::string, SInputDeviceMap>& GetActionMaps() const { return _maps; }
+	FORCEINLINE const std::string& GetActiveActionMap() const { return _activeActionMapId; }
+	FORCEINLINE const TFastMap<std::string, SInputDeviceMap>& GetActionMaps() const { return _actionMaps; }
 
 	FORCEINLINE const GUID& GetId() const { return _data.guidInstance; }
 	FORCEINLINE const SString& GetIdString() const { return _idAsStr; }
@@ -261,15 +261,18 @@ public:
 	void PrintActiveActionMap() const;
 
 private:
+	friend BOOL CALLBACK HandleEnumDeviceObjects(LPCDIDEVICEOBJECTINSTANCE, VOID*);
+
 	EInputDeviceType _type = EInputDeviceType::None;
 
 	SString _idAsStr;
 	SString _typeAsStr;
 
 	DIDEVICEINSTANCE _data;
-	std::string _activeMapId;
+	std::string _activeActionMapId;
 
-	TFastMap<std::string, SInputDeviceMap> _maps;
+	TFastMap<std::string, SInputDeviceMap> _actionMaps;
+	std::unordered_map<DWORD, DIDEVICEOBJECTINSTANCE> _objects;
 };
 
 class CInputPatched final : public CDirectInput8Proxy
@@ -286,7 +289,7 @@ public:
 	STDOVERRIDEMETHODIMP EnumDevicesBySemantics(LPCSTR pszUserName, LPDIACTIONFORMAT lpActionFormat, LPDIENUMDEVICESBYSEMANTICSCB lpCallback, LPVOID pvRef, DWORD dwFlags);
 
 private:
-	friend BOOL CALLBACK HandleEnumDevices(const DIDEVICEINSTANCE* pdidInstance, VOID* pvRef);
+	friend BOOL CALLBACK HandleEnumDevices(LPCDIDEVICEINSTANCE, VOID*);
 
 	TFastMap<GUID, TComPtr<CInputDevicePatched>> _devices;
 };
@@ -296,17 +299,16 @@ class CDirectInputExtension final : public IProgramExtension
 public:
 	typedef IProgramExtension Super;
 
-	FORCEINLINE const TComPtr<CInputPatched>& GetCOM() const { return _input; }
+	FORCEINLINE const TComPtr<CInputPatched>& GetInput() const { return _input; }
+
+	void PrintActiveActionMaps(const int32 deviceIdx = INDEX_NONE) const;
 
 	// ~BEGIN IProgramExtension interface
 	virtual void Initialize() override;
-	virtual void Tick(double deltaTime) override;
 	virtual void Shutdown() override;
 	// ~END IProgramExtension interface
 
 private:
-	void PrintActiveMapping(const int32 deviceIdx = INDEX_NONE) const;
-
 	HMODULE _inputModuleHandle = nullptr;
 	LPVOID _createInputHook = nullptr;
 	TComPtr<CInputPatched> _input;

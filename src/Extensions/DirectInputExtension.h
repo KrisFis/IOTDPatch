@@ -305,6 +305,7 @@ public:
 
 	// ~BEGIN IProgramExtension interface
 	virtual void Initialize() override;
+	virtual void Tick(double deltaTime) override;
 	virtual void Shutdown() override;
 	// ~END IProgramExtension interface
 

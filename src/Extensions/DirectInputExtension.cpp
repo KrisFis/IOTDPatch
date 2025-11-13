@@ -491,6 +491,24 @@ void CDirectInputExtension::Initialize()
 	}
 }
 
+void CDirectInputExtension::Tick(double deltaTime)
+{
+	IProgramExtension::Tick(deltaTime);
+
+#if BUILD_DEBUG
+	if (GetAsyncKeyState(VK_NUMPAD0)) PrintActiveActionMaps();
+	else if (GetAsyncKeyState(VK_NUMPAD1)) PrintActiveActionMaps(0);
+	else if (GetAsyncKeyState(VK_NUMPAD2)) PrintActiveActionMaps(1);
+	else if (GetAsyncKeyState(VK_NUMPAD3)) PrintActiveActionMaps(2);
+	else if (GetAsyncKeyState(VK_NUMPAD4)) PrintActiveActionMaps(3);
+	else if (GetAsyncKeyState(VK_NUMPAD5)) PrintActiveActionMaps(4);
+	else if (GetAsyncKeyState(VK_NUMPAD6)) PrintActiveActionMaps(5);
+	else if (GetAsyncKeyState(VK_NUMPAD7)) PrintActiveActionMaps(6);
+	else if (GetAsyncKeyState(VK_NUMPAD8)) PrintActiveActionMaps(7);
+	else if (GetAsyncKeyState(VK_NUMPAD9)) PrintActiveActionMaps(8);
+#endif
+}
+
 void CDirectInputExtension::Shutdown()
 {
 	CHECK(MH_RemoveHook(_createInputHook) == MH_OK);

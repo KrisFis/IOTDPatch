@@ -5,12 +5,16 @@
 #include "MinHook.h"
 #include "Program.h"
 
+constexpr const tchar* CAMERA_CONTROL_ACTION = TEXT("DIA_GAME_CAMERACONTROL");
+constexpr const tchar* CAMERA_X = TEXT("DIA_GAME_AXIS_X");
+constexpr const tchar* CAMERA_Y = TEXT("DIA_GAME_AXIS_Y");
+
 BOOL CALLBACK HandleEnumDeviceObjects(LPCDIDEVICEOBJECTINSTANCE pdidInstance, VOID* pvRef)
 {
 	if (!pdidInstance) return DIENUM_CONTINUE;
 
 	CInputDevicePatched* owner = (CInputDevicePatched*)pvRef;
-	owner->_objects[pdidInstance->dwType] = *pdidInstance;
+	owner->_objects.Add(*pdidInstance);
 
 	return DIENUM_CONTINUE;
 }
@@ -239,6 +243,20 @@ SString ToString(const GUID& guid)
 	);
 }
 
+void SObjectsMap::Add(const DIDEVICEOBJECTINSTANCE& object)
+{
+	if (!CHECK(!_dwOfsLookup.contains(object.dwOfs)) ||
+		!CHECK(!_idLookup.contains(object.dwType)))
+	{
+		return;
+	}
+
+	const int32 newIdx = _objects.Add(object);
+
+	_dwOfsLookup[object.dwOfs] = newIdx;
+	_idLookup[object.dwType] = newIdx;
+}
+
 void SInputDeviceMap::Reset(const DIACTIONFORMAT& data)
 {
 	if (IsValid())
@@ -272,14 +290,37 @@ CInputDevicePatched::CInputDevicePatched(IDirectInputDevice8A* impl, const DIDEV
 	}
 }
 
-HRESULT CInputDevicePatched::GetDeviceState(DWORD cbData, LPVOID lpvData)
-{
-	return CDirectInputDevice8Proxy::GetDeviceState(cbData, lpvData);
-}
-
 HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags)
 {
-	return CDirectInputDevice8Proxy::GetDeviceData(cbObjectData, rgdod, pdwInOut, dwFlags);
+	const HRESULT result = CDirectInputDevice8Proxy::GetDeviceData(cbObjectData, rgdod, pdwInOut, dwFlags);
+	if (FAILED(result))
+	{
+		return result;
+	}
+
+	for (DWORD i = 0; i < *pdwInOut; ++i)
+	{
+		DIDEVICEOBJECTDATA& ev = rgdod[i];
+
+		const DIDEVICEOBJECTINSTANCE* object = nullptr;
+		switch (_type)
+		{
+			case EInputDeviceType::Mouse:
+				object = _objects.FindViaOfs(ev.dwOfs);
+				break;
+			case EInputDeviceType::Keyboard:
+				// TODO: IMPLEMENT
+				break;
+			default: break;
+		}
+
+		if (!object)
+		{
+			LogWarning(TEXT("CInputDevicePatched%s: Key '%d' not found"), *_typeAsStr, ev.dwOfs);
+		}
+	}
+
+	return result;
 }
 
 HRESULT CInputDevicePatched::BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
@@ -381,13 +422,13 @@ void CInputDevicePatched::PrintActiveActionMap() const
 		if (!InlineIsEqualGUID(GetId(), action.guidInstance)) continue;
 
 		SString keyName = TEXT("<None>");
-		if (const auto& it = _objects.find(action.dwObjID);
-			it != _objects.end())
+
+		if (const DIDEVICEOBJECTINSTANCE* object = _objects.FindViaId(action.dwObjID))
 		{
-			keyName = it->second.tszName;
+			keyName = object->tszName;
 		}
 
-		LogInfo(TEXT("%s: %s"), action.lptszActionName, *keyName);
+		LogInfo(TEXT("Name: %s, Key: %s"), action.lptszActionName, *keyName);
 	}
 }
 

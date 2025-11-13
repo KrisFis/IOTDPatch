@@ -216,6 +216,28 @@ private:
 	std::unordered_map<KeyT, uint16> _lookup;
 };
 
+struct SObjectsMap
+{
+	FORCEINLINE const DIDEVICEOBJECTINSTANCE* FindViaOfs(const DWORD ofs) const
+	{
+		const auto& it = _dwOfsLookup.find(ofs);
+		return it != _dwOfsLookup.end() ? &_objects[it->second] : nullptr;
+	}
+
+	FORCEINLINE const DIDEVICEOBJECTINSTANCE* FindViaId(const DWORD id) const
+	{
+		const auto& it = _idLookup.find(id);
+		return it != _idLookup.end() ? &_objects[it->second] : nullptr;
+	}
+
+	void Add(const DIDEVICEOBJECTINSTANCE& object);
+
+private:
+	TArray<DIDEVICEOBJECTINSTANCE> _objects;
+	std::unordered_map<DWORD, uint16> _dwOfsLookup;
+	std::unordered_map<DWORD, uint16> _idLookup;
+};
+
 struct SInputDeviceMap
 {
 	SInputDeviceMap() = default;
@@ -253,7 +275,6 @@ public:
 	FORCEINLINE const SString& GetIdString() const { return _idAsStr; }
 	FORCEINLINE const DIDEVICEINSTANCE& GetData() const { return _data; }
 
-	STDOVERRIDEMETHODIMP GetDeviceState(DWORD cbData, LPVOID lpvData);
 	STDOVERRIDEMETHODIMP GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags);
 	STDOVERRIDEMETHODIMP BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags);
 	STDOVERRIDEMETHODIMP SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags);
@@ -272,7 +293,7 @@ private:
 	std::string _activeActionMapId;
 
 	TFastMap<std::string, SInputDeviceMap> _actionMaps;
-	std::unordered_map<DWORD, DIDEVICEOBJECTINSTANCE> _objects;
+	SObjectsMap _objects;
 };
 
 class CInputPatched final : public CDirectInput8Proxy

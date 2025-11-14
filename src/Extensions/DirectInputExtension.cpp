@@ -2,22 +2,23 @@
 
 #include "DirectInputExtension.h"
 
+#include <set>
+
 #include "MinHook.h"
 #include "Program.h"
 
-constexpr const tchar* CAMERA_CONTROL_ACTION = TEXT("DIA_GAME_CAMERACONTROL");
-constexpr const tchar* CAMERA_X = TEXT("DIA_GAME_AXIS_X");
-constexpr const tchar* CAMERA_Y = TEXT("DIA_GAME_AXIS_Y");
+constexpr const char* CAMERA_CONTROL_ACTION_NAME = "DIA_GAME_CAMERACONTROL";
+constexpr const char* CAMERA_X_NAME = "DIA_GAME_AXIS_X";
+constexpr const char* CAMERA_Y_NAME = "DIA_GAME_AXIS_Y";
 
-BOOL CALLBACK HandleEnumDeviceObjects(LPCDIDEVICEOBJECTINSTANCE pdidInstance, VOID* pvRef)
+struct
 {
-	if (!pdidInstance) return DIENUM_CONTINUE;
+	std::set<DWORD> ActionSemantic_CameraControl;
+	std::set<DWORD> ActionSemantic_CameraXY;
 
-	CInputDevicePatched* owner = (CInputDevicePatched*)pvRef;
-	owner->_objects.Add(*pdidInstance);
-
-	return DIENUM_CONTINUE;
-}
+	float Sensitivity = 0.0025f;
+	bool ControlActionPressed = false;
+} GRuntime;
 
 BOOL CALLBACK HandleEnumDevices(LPCDIDEVICEINSTANCE pdidInstance, void* pvRef)
 {
@@ -101,139 +102,6 @@ SString ToString(EInputDeviceType type)
 	}
 }
 
-SString ToString(EInputKey type, EInputDeviceType deviceType)
-{
-	switch (deviceType)
-	{
-		case EInputDeviceType::Mouse:
-			switch (type)
-			{
-				case EInputKey::MouseX: return TEXT("MouseX");
-				case EInputKey::MouseY: return TEXT("MouseY");
-				case EInputKey::MouseZ: return TEXT("MouseZ");
-				case EInputKey::MouseButtonZero: return TEXT("MouseButtonZero");
-				case EInputKey::MouseButtonOne: return TEXT("MouseButtonOne");
-				case EInputKey::MouseButtonTwo: return TEXT("MouseButtonTwo");
-				case EInputKey::MouseButtonThree: return TEXT("MouseButtonThree");
-				case EInputKey::MouseButtonFour: return TEXT("MouseButtonFour");
-				case EInputKey::MouseButtonFive: return TEXT("MouseButtonFive");
-				case EInputKey::MouseButtonSix: return TEXT("MouseButtonSix");
-				case EInputKey::MouseButtonSeven: return TEXT("MouseButtonSeven");
-				default: break;
-			}
-			break;
-		case EInputDeviceType::Keyboard:
-			switch (type)
-			{
-				case EInputKey::Q: return TEXT("Q");
-				case EInputKey::W: return TEXT("W");
-				case EInputKey::E: return TEXT("E");
-				case EInputKey::R: return TEXT("R");
-				case EInputKey::T: return TEXT("T");
-				case EInputKey::Y: return TEXT("Y");
-				case EInputKey::U: return TEXT("U");
-				case EInputKey::I: return TEXT("I");
-				case EInputKey::O: return TEXT("O");
-				case EInputKey::P: return TEXT("P");
-				case EInputKey::A: return TEXT("A");
-				case EInputKey::S: return TEXT("S");
-				case EInputKey::D: return TEXT("D");
-				case EInputKey::F: return TEXT("F");
-				case EInputKey::G: return TEXT("G");
-				case EInputKey::H: return TEXT("H");
-				case EInputKey::J: return TEXT("J");
-				case EInputKey::K: return TEXT("K");
-				case EInputKey::L: return TEXT("L");
-				case EInputKey::Z: return TEXT("Z");
-				case EInputKey::X: return TEXT("X");
-				case EInputKey::C: return TEXT("C");
-				case EInputKey::V: return TEXT("V");
-				case EInputKey::B: return TEXT("B");
-				case EInputKey::N: return TEXT("N");
-				case EInputKey::M: return TEXT("M");
-				case EInputKey::F1: return TEXT("F1");
-				case EInputKey::F2: return TEXT("F2");
-				case EInputKey::F3: return TEXT("F3");
-				case EInputKey::F4: return TEXT("F4");
-				case EInputKey::F5: return TEXT("F5");
-				case EInputKey::F6: return TEXT("F6");
-				case EInputKey::F7: return TEXT("F7");
-				case EInputKey::F8: return TEXT("F8");
-				case EInputKey::F9: return TEXT("F9");
-				case EInputKey::F10: return TEXT("F10");
-				case EInputKey::F11: return TEXT("F11");
-				case EInputKey::F12: return TEXT("F12");
-				case EInputKey::Escape: return TEXT("Escape");
-				case EInputKey::One: return TEXT("One");
-				case EInputKey::Two: return TEXT("Two");
-				case EInputKey::Three: return TEXT("Three");
-				case EInputKey::Four: return TEXT("Four");
-				case EInputKey::Five: return TEXT("Five");
-				case EInputKey::Six: return TEXT("Six");
-				case EInputKey::Seven: return TEXT("Seven");
-				case EInputKey::Eight: return TEXT("Eight");
-				case EInputKey::Nine: return TEXT("Nine");
-				case EInputKey::Zero: return TEXT("Zero");
-				case EInputKey::Minus: return TEXT("Minus");
-				case EInputKey::Equals: return TEXT("Equals");
-				case EInputKey::Back: return TEXT("Back");
-				case EInputKey::Tab: return TEXT("Tab");
-				case EInputKey::Semicolon: return TEXT("Semicolon");
-				case EInputKey::Apostrophe: return TEXT("Apostrophe");
-				case EInputKey::Grave: return TEXT("Grave");
-				case EInputKey::LeftShift: return TEXT("LeftShift");
-				case EInputKey::Backslash: return TEXT("Backslash");
-				case EInputKey::Comma: return TEXT("Comma");
-				case EInputKey::Period: return TEXT("Period");
-				case EInputKey::Slash: return TEXT("Slash");
-				case EInputKey::RightShift: return TEXT("RightShift");
-				case EInputKey::Multiply: return TEXT("Multiply");
-				case EInputKey::LeftMenu: return TEXT("LeftMenu");
-				case EInputKey::Space: return TEXT("Space");
-				case EInputKey::Capital: return TEXT("Capital");
-				case EInputKey::LeftBracket: return TEXT("LeftBracket");
-				case EInputKey::RightBracket: return TEXT("RightBracket");
-				case EInputKey::Return: return TEXT("Return");
-				case EInputKey::LeftControl: return TEXT("LeftControl");
-				case EInputKey::NumpadSeven: return TEXT("NumpadSeven");
-				case EInputKey::NumpadEight: return TEXT("NumpadEight");
-				case EInputKey::NumpadNine: return TEXT("NumpadNine");
-				case EInputKey::Subtract: return TEXT("Subtract");
-				case EInputKey::NumpadFour: return TEXT("NumpadFour");
-				case EInputKey::NumpadFive: return TEXT("NumpadFive");
-				case EInputKey::NumpadSix: return TEXT("NumpadSix");
-				case EInputKey::NumpadAdd: return TEXT("NumpadAdd");
-				case EInputKey::NumpadOne: return TEXT("NumpadOne");
-				case EInputKey::NumpadTwo: return TEXT("NumpadTwo");
-				case EInputKey::NumpadThree: return TEXT("NumpadThree");
-				case EInputKey::NumpadZero: return TEXT("NumpadZero");
-				case EInputKey::Decimal: return TEXT("Decimal");
-				case EInputKey::NumpadEquals: return TEXT("NumpadEquals");
-				case EInputKey::NumpadEnter: return TEXT("NumpadEnter");
-				case EInputKey::RightControl: return TEXT("RightControl");
-				case EInputKey::NumpadComma: return TEXT("NumpadComma");
-				case EInputKey::NumpadDivide: return TEXT("NumpadDivide");
-				case EInputKey::RightAlt: return TEXT("RightAlt");
-				case EInputKey::Pause: return TEXT("Pause");
-				case EInputKey::Home: return TEXT("Home");
-				case EInputKey::Up: return TEXT("Up");
-				case EInputKey::PageUp: return TEXT("PageUp");
-				case EInputKey::Left: return TEXT("Left");
-				case EInputKey::Right: return TEXT("Right");
-				case EInputKey::End: return TEXT("End");
-				case EInputKey::Down: return TEXT("Down");
-				case EInputKey::Next: return TEXT("Next");
-				case EInputKey::Insert: return TEXT("Insert");
-				case EInputKey::Delete: return TEXT("Delete");
-				default: break;
-			}
-			break;
-		default: break;
-	}
-
-	return TEXT("Unknown");
-}
-
 SString ToString(const GUID& guid)
 {
 	return SString::Printf(TEXT("{%08lX-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}"),
@@ -243,36 +111,22 @@ SString ToString(const GUID& guid)
 	);
 }
 
-void SObjectsMap::Add(const DIDEVICEOBJECTINSTANCE& object)
-{
-	if (!CHECK(!_dwOfsLookup.contains(object.dwOfs)) ||
-		!CHECK(!_idLookup.contains(object.dwType)))
-	{
-		return;
-	}
-
-	const int32 newIdx = _objects.Add(object);
-
-	_dwOfsLookup[object.dwOfs] = newIdx;
-	_idLookup[object.dwType] = newIdx;
-}
-
 void SInputDeviceMap::Reset(const DIACTIONFORMAT& data)
 {
 	if (IsValid())
 	{
-		if (_data.rgoAction)
+		if (_format.rgoAction)
 		{
-			SMemory::Free(_data.rgoAction);
+			SMemory::Free(_format.rgoAction);
 		}
 	}
 
-	_data = data;
+	_format = data;
 	if (data.rgoAction)
 	{
 		const uint64 bytes = data.dwNumActions * data.dwActionSize;
-		_data.rgoAction = (DIACTION*)SMemory::Malloc(bytes);
-		SMemory::Copy(_data.rgoAction, data.rgoAction, bytes);
+		_format.rgoAction = (DIACTION*)SMemory::Malloc(bytes);
+		SMemory::Copy(_format.rgoAction, data.rgoAction, bytes);
 	}
 }
 
@@ -281,14 +135,8 @@ CInputDevicePatched::CInputDevicePatched(IDirectInputDevice8A* impl, const DIDEV
 	, _type((EInputDeviceType)LOBYTE(data.dwDevType))
 	, _idAsStr(ToString(data.guidInstance))
 	, _typeAsStr(ToString(_type))
-	, _data(data)
-{
-	const HRESULT result = impl->EnumObjects(HandleEnumDeviceObjects, this, DIDFT_ALL);
-	if (!CHECK(SUCCEEDED(result)))
-	{
-		LogWarning(TEXT("CInputDevicePatched: Could not evaluate objects !"));
-	}
-}
+	, _info(data)
+{}
 
 HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags)
 {
@@ -298,25 +146,48 @@ HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTD
 		return result;
 	}
 
+	const SInputDeviceMap* activeMap = _actionMaps.Find(_activeActionMapId);
+	if (!activeMap)
+	{
+		LogWarning(TEXT("CInputDevicePatched%s %s: Active map '%s' not found"),
+			*_typeAsStr,
+			BUILD_DEBUG ? *_idAsStr : "",
+			_activeActionMapId.c_str()
+		);
+		return result;
+	}
+
 	for (DWORD i = 0; i < *pdwInOut; ++i)
 	{
-		DIDEVICEOBJECTDATA& ev = rgdod[i];
+		// we need to offset by size of the object
+		DIDEVICEOBJECTDATA& ev = *(DIDEVICEOBJECTDATA*)((char*)rgdod + cbObjectData * i);
 
-		const DIDEVICEOBJECTINSTANCE* object = nullptr;
-		switch (_type)
+		// It's offset in array of [ DWORD ActionState[NumActions] ]
+		const DWORD actionIdx = ev.dwOfs / sizeof(DWORD);
+
+		if (!LIKELY(_actionStates.IsValidIndex(actionIdx)))
 		{
-			case EInputDeviceType::Mouse:
-				object = _objects.FindViaOfs(ev.dwOfs);
-				break;
-			case EInputDeviceType::Keyboard:
-				// TODO: IMPLEMENT
-				break;
-			default: break;
+			LogWarning(TEXT("CInputDevicePatched%s %s: Invalid action index '%lu' encountered"),
+				*_typeAsStr,
+				BUILD_DEBUG ? *_idAsStr : "",
+				ev.dwOfs
+			);
+			continue;
 		}
 
-		if (!object)
+		_actionStates[actionIdx] = ev.dwData;
+
+		// FINALLY the patch for sensitivity
+		const DIACTION& action = activeMap->GetActions()[actionIdx];
+		if (GRuntime.ActionSemantic_CameraControl.contains(action.dwSemantic))
 		{
-			LogWarning(TEXT("CInputDevicePatched%s: Key '%d' not found"), *_typeAsStr, ev.dwOfs);
+			GRuntime.ControlActionPressed = LOBYTE(ev.dwData) > 0;
+			LogDebug(TEXT("Control %s"), GRuntime.ControlActionPressed ? TEXT("pressed") : TEXT("released"));
+		}
+		else if (GRuntime.ControlActionPressed && GRuntime.ActionSemantic_CameraXY.contains(action.dwSemantic))
+		{
+			const float scaledData = (float)ev.dwData * GRuntime.Sensitivity;
+			ev.dwData = 0; // TODO: IMPLEMENT
 		}
 	}
 
@@ -352,6 +223,23 @@ HRESULT CInputDevicePatched::BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPC
 		lpszUserName
 	);
 
+	// Patch for Runtime
+	{
+		for (uint32 i = 0; i < lpActionFormat->dwNumActions; ++i)
+		{
+			const DIACTION& action = *(DIACTION*)((char*)lpActionFormat->rgoAction + (lpActionFormat->dwActionSize * i));
+			if (SCString::Compare(action.lptszActionName, CAMERA_CONTROL_ACTION_NAME) == 0)
+			{
+				GRuntime.ActionSemantic_CameraControl.emplace(action.dwSemantic);
+			}
+			else if (SCString::Compare(action.lptszActionName, CAMERA_X_NAME) == 0 ||
+					 SCString::Compare(action.lptszActionName, CAMERA_Y_NAME) == 0)
+			{
+				GRuntime.ActionSemantic_CameraXY.emplace(action.dwSemantic);
+			}
+		}
+	}
+
 	return result;
 }
 
@@ -382,50 +270,38 @@ HRESULT CInputDevicePatched::SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCST
 		lpszUserName
 	);
 
+	// Refresh Action States
+	{
+		_actionStates.Empty(lpActionFormat->dwNumActions);
+		_actionStates.AddDefaulted(lpActionFormat->dwNumActions);
+	}
+
 	return result;
 }
 
 void CInputDevicePatched::PrintActiveActionMap() const
 {
-	if (_activeActionMapId.empty())
-	{
-		LogInfo(TEXT("CInputDevicePatched%s: No active action map"),
-			*_typeAsStr,
-			_activeActionMapId.c_str()
-		);
-
-		return;
-	}
-
 	const auto* foundMap = _actionMaps.Find(_activeActionMapId);
-	if (!foundMap)
-	{
-		LogWarning(TEXT("CInputDevicePatched%s: Action Map '%s' not found:"),
-			*_typeAsStr,
-			_activeActionMapId.c_str()
-		);
-
-		return;
-	}
+	if (!foundMap) return;
 
 	LogInfo(TEXT("--------------- %s (%s) ---------------"),
 		_activeActionMapId.c_str(),
 		*_typeAsStr
 	);
 
-	SString actionsAsStr = SString::GetEmpty();
+	DIDEVICEOBJECTINSTANCE object = DIDEVICEOBJECTINSTANCE(); // zero memory
+	object.dwSize = sizeof(DIDEVICEOBJECTINSTANCE);
 
-	const DIACTIONFORMAT& mf = foundMap->GetData();
+	const DIACTIONFORMAT& mf = foundMap->GetFormat();
 	for (DWORD i = 0; i < mf.dwNumActions; ++i)
 	{
-		const auto& action = mf.rgoAction[i];
+		const DIACTION& action = *(DIACTION*)((char*)mf.rgoAction + (mf.dwActionSize * i));
 		if (!InlineIsEqualGUID(GetId(), action.guidInstance)) continue;
 
 		SString keyName = TEXT("<None>");
-
-		if (const DIDEVICEOBJECTINSTANCE* object = _objects.FindViaId(action.dwObjID))
+		if (SUCCEEDED(GetImpl()->GetObjectInfo(&object, action.dwObjID, DIPH_BYID)))
 		{
-			keyName = object->tszName;
+			keyName = object.tszName;
 		}
 
 		LogInfo(TEXT("Name: %s, Key: %s"), action.lptszActionName, *keyName);
@@ -435,10 +311,9 @@ void CInputDevicePatched::PrintActiveActionMap() const
 CInputPatched::CInputPatched(IDirectInput8A* impl)
 	: Super(impl)
 {
-	const HRESULT result = impl->EnumDevices(DI8DEVCLASS_ALL, HandleEnumDevices, this, DIEDFL_ATTACHEDONLY);
-	if (!CHECK(SUCCEEDED(result)))
+	if (!CHECK(SUCCEEDED(impl->EnumDevices(DI8DEVCLASS_ALL, HandleEnumDevices, this, DIEDFL_ATTACHEDONLY))))
 	{
-		LogWarning(TEXT("CInputPatched: Could not evaluate devices !"));
+		LogWarning(TEXT("CInputPatched: Could not fetch devices !"));
 	}
 }
 
@@ -460,7 +335,7 @@ HRESULT CInputPatched::EnumDevices(DWORD dwDevType, LPDIENUMDEVICESCALLBACK lpCa
 {
 	for (const TComPtr<CInputDevicePatched>& device : _devices.GetValues())
 	{
-		const BOOL result = lpCallback(&device->GetData(), pvRef);
+		const BOOL result = lpCallback(&device->GetInfo(), pvRef);
 		if (result == DIENUM_STOP) break;
 	}
 
@@ -474,7 +349,7 @@ HRESULT CInputPatched::EnumDevicesBySemantics(LPCSTR pszUserName, LPDIACTIONFORM
 		const auto& device = _devices.GetByIndex(i);
 		const uint16 remaining = (_devices.GetNum() - 1) - i;
 
-		const BOOL result = lpCallback(&device->GetData(), device.Get(), DIEDBS_RECENTDEVICE, remaining, pvRef);
+		const BOOL result = lpCallback(&device->GetInfo(), device.Get(), DIEDBS_RECENTDEVICE, remaining, pvRef);
 		if (result == DIENUM_STOP) break;
 	}
 

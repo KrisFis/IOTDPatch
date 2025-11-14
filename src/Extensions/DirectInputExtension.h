@@ -23,133 +23,7 @@ enum class EInputDeviceType : uint8
 	Supplemental = DI8DEVTYPE_SUPPLEMENTAL,
 };
 
-enum class EInputKey : uint8
-{
-	None = 0,
-
-	MouseX = DIMOFS_X,
-	MouseY = DIMOFS_Y,
-	MouseZ = DIMOFS_Z,
-
-	MouseButtonZero = DIMOFS_BUTTON0,
-	MouseButtonOne = DIMOFS_BUTTON1,
-	MouseButtonTwo = DIMOFS_BUTTON2,
-	MouseButtonThree = DIMOFS_BUTTON3,
-	MouseButtonFour = DIMOFS_BUTTON4,
-	MouseButtonFive = DIMOFS_BUTTON5,
-	MouseButtonSix = DIMOFS_BUTTON6,
-	MouseButtonSeven = DIMOFS_BUTTON7,
-
-	Q = DIK_Q,
-	W = DIK_W,
-	E = DIK_E,
-	R = DIK_R,
-	T = DIK_T,
-	Y = DIK_Y,
-	U = DIK_U,
-	I = DIK_I,
-	O = DIK_O,
-	P = DIK_P,
-	A = DIK_A,
-	S = DIK_S,
-	D = DIK_D,
-	F = DIK_F,
-	G = DIK_G,
-	H = DIK_H,
-	J = DIK_J,
-	K = DIK_K,
-	L = DIK_L,
-
-	Z = DIK_Z,
-	X = DIK_X,
-	C = DIK_C,
-	V = DIK_V,
-	B = DIK_B,
-	N = DIK_N,
-	M = DIK_M,
-
-	F1 = DIK_F1,
-	F2 = DIK_F2,
-	F3 = DIK_F3,
-	F4 = DIK_F4,
-	F5 = DIK_F5,
-	F6 = DIK_F6,
-	F7 = DIK_F7,
-	F8 = DIK_F8,
-	F9 = DIK_F9,
-	F10 = DIK_F10,
-	F11 = DIK_F11,
-	F12 = DIK_F12,
-
-	Escape = DIK_ESCAPE,
-	One = DIK_1,
-	Two = DIK_2,
-	Three = DIK_3,
-	Four = DIK_4,
-	Five = DIK_5,
-	Six = DIK_6,
-	Seven = DIK_7,
-	Eight = DIK_8,
-	Nine = DIK_9,
-	Zero = DIK_0,
-	Minus = DIK_MINUS,
-	Equals = DIK_EQUALS,
-	Back = DIK_BACK,
-	Tab = DIK_TAB,
-	Semicolon = DIK_SEMICOLON,
-	Apostrophe = DIK_APOSTROPHE,
-	Grave = DIK_GRAVE,
-	LeftShift = DIK_LSHIFT,
-	Backslash = DIK_BACKSLASH,
-
-	Comma = DIK_COMMA,
-	Period = DIK_PERIOD,
-	Slash = DIK_SLASH,
-	RightShift = DIK_RSHIFT,
-	Multiply = DIK_MULTIPLY,
-	LeftMenu = DIK_LMENU,
-	Space = DIK_SPACE,
-	Capital = DIK_CAPITAL,
-
-	LeftBracket = DIK_LBRACKET,
-	RightBracket = DIK_RBRACKET,
-	Return = DIK_RETURN,
-	LeftControl = DIK_LCONTROL,
-
-	NumpadSeven = DIK_NUMPAD7,
-	NumpadEight = DIK_NUMPAD8,
-	NumpadNine = DIK_NUMPAD9,
-	Subtract = DIK_SUBTRACT,
-	NumpadFour = DIK_NUMPAD4,
-	NumpadFive = DIK_NUMPAD5,
-	NumpadSix = DIK_NUMPAD6,
-	NumpadAdd = DIK_ADD,
-	NumpadOne = DIK_NUMPAD1,
-	NumpadTwo = DIK_NUMPAD2,
-	NumpadThree = DIK_NUMPAD3,
-	NumpadZero = DIK_NUMPAD0,
-	Decimal = DIK_DECIMAL,
-	NumpadEquals = DIK_NUMPADEQUALS,
-	NumpadEnter = DIK_NUMPADENTER,
-	RightControl = DIK_RCONTROL,
-	NumpadComma = DIK_NUMPADCOMMA,
-	NumpadDivide = DIK_DIVIDE,
-	RightAlt = DIK_RALT,
-	Pause = DIK_PAUSE,
-	Home = DIK_HOME,
-	Up = DIK_UP,
-	PageUp = DIK_PRIOR,
-	Left = DIK_LEFT,
-	Right = DIK_RIGHT,
-	End = DIK_END,
-	Down = DIK_DOWN,
-	Next = DIK_NEXT,
-	Insert = DIK_INSERT,
-	Delete = DIK_DELETE
-};
-
 SString ToString(EInputDeviceType type);
-SString ToString(EInputKey type, EInputDeviceType deviceType);
 SString ToString(const GUID& guid);
 
 template<>
@@ -216,49 +90,29 @@ private:
 	std::unordered_map<KeyT, uint16> _lookup;
 };
 
-struct SObjectsMap
-{
-	FORCEINLINE const DIDEVICEOBJECTINSTANCE* FindViaOfs(const DWORD ofs) const
-	{
-		const auto& it = _dwOfsLookup.find(ofs);
-		return it != _dwOfsLookup.end() ? &_objects[it->second] : nullptr;
-	}
-
-	FORCEINLINE const DIDEVICEOBJECTINSTANCE* FindViaId(const DWORD id) const
-	{
-		const auto& it = _idLookup.find(id);
-		return it != _idLookup.end() ? &_objects[it->second] : nullptr;
-	}
-
-	void Add(const DIDEVICEOBJECTINSTANCE& object);
-
-private:
-	TArray<DIDEVICEOBJECTINSTANCE> _objects;
-	std::unordered_map<DWORD, uint16> _dwOfsLookup;
-	std::unordered_map<DWORD, uint16> _idLookup;
-};
-
 struct SInputDeviceMap
 {
 	SInputDeviceMap() = default;
 	FORCEINLINE SInputDeviceMap(const DIACTIONFORMAT& other) { Reset(other); }
 	FORCEINLINE ~SInputDeviceMap() { Reset(); }
 
-	FORCEINLINE bool IsValid() const { return _data.dwSize > 0 && _data.dwActionSize > 0; }
+	FORCEINLINE bool IsValid() const { return _format.dwSize > 0 && _format.dwActionSize > 0; }
+	FORCEINLINE int32 GetNumOfActions() const { return _format.dwNumActions; }
+	FORCEINLINE const DIACTION* GetActions() const { return _format.rgoAction; }
 
-	FORCEINLINE SInputDeviceMap(const SInputDeviceMap& other) { Reset(other._data); }
-	FORCEINLINE SInputDeviceMap& operator=(const SInputDeviceMap& other) { Reset(other._data); return *this; }
+	FORCEINLINE SInputDeviceMap(const SInputDeviceMap& other) { Reset(other._format); }
+	FORCEINLINE SInputDeviceMap& operator=(const SInputDeviceMap& other) { Reset(other._format); return *this; }
 
-	FORCEINLINE const DIACTIONFORMAT* operator->() const { return &_data; }
-	FORCEINLINE const DIACTIONFORMAT& operator*() const { return _data; }
+	FORCEINLINE const DIACTIONFORMAT* operator->() const { return &_format; }
+	FORCEINLINE const DIACTIONFORMAT& operator*() const { return _format; }
 
-	FORCEINLINE const DIACTIONFORMAT& GetData() const { return _data; }
-	FORCEINLINE operator const DIACTIONFORMAT&() const { return _data; }
+	FORCEINLINE const DIACTIONFORMAT& GetFormat() const { return _format; }
+	FORCEINLINE operator const DIACTIONFORMAT&() const { return _format; }
 
 	void Reset(const DIACTIONFORMAT& data = {});
 
 private:
-	DIACTIONFORMAT _data = DIACTIONFORMAT();
+	DIACTIONFORMAT _format = DIACTIONFORMAT();
 };
 
 class CInputDevicePatched final : public CDirectInputDevice8Proxy
@@ -271,9 +125,9 @@ public:
 	FORCEINLINE const std::string& GetActiveActionMap() const { return _activeActionMapId; }
 	FORCEINLINE const TFastMap<std::string, SInputDeviceMap>& GetActionMaps() const { return _actionMaps; }
 
-	FORCEINLINE const GUID& GetId() const { return _data.guidInstance; }
+	FORCEINLINE const GUID& GetId() const { return _info.guidInstance; }
 	FORCEINLINE const SString& GetIdString() const { return _idAsStr; }
-	FORCEINLINE const DIDEVICEINSTANCE& GetData() const { return _data; }
+	FORCEINLINE const DIDEVICEINSTANCE& GetInfo() const { return _info; }
 
 	STDOVERRIDEMETHODIMP GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags);
 	STDOVERRIDEMETHODIMP BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags);
@@ -282,18 +136,16 @@ public:
 	void PrintActiveActionMap() const;
 
 private:
-	friend BOOL CALLBACK HandleEnumDeviceObjects(LPCDIDEVICEOBJECTINSTANCE, VOID*);
-
 	EInputDeviceType _type = EInputDeviceType::None;
 
 	SString _idAsStr;
 	SString _typeAsStr;
 
-	DIDEVICEINSTANCE _data;
+	DIDEVICEINSTANCE _info;
 	std::string _activeActionMapId;
 
 	TFastMap<std::string, SInputDeviceMap> _actionMaps;
-	SObjectsMap _objects;
+	TArray<uint32> _actionStates; // pooled action states
 };
 
 class CInputPatched final : public CDirectInput8Proxy

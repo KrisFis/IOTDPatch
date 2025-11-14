@@ -45,10 +45,8 @@ private:
 		std::streambuf* sb2 = nullptr;
 	};
 
-#if BUILD_DEBUG
-	std::streambuf* _conBuf = nullptr;
 	FILE* _conOut = nullptr;
-#endif
+	std::streambuf* _conBuf = nullptr;
 
 	StreamDualBuf _dbuf;
 	std::streambuf* _oldBuf = nullptr;

@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "ProgramExtension.h"
 #include "DirectInput.h"
 

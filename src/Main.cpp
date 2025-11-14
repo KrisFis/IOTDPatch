@@ -24,8 +24,6 @@ BOOL WINAPI DllMain(HMODULE hModule, DWORD reasonForCall, LPVOID lpReserved)
 {
 	if (reasonForCall != DLL_PROCESS_ATTACH) return TRUE;
 
-	NProgram::WaitForDebugger();
-
 	GModule = hModule;
 	CreateThread(nullptr, 0, DllThreadMain, nullptr, 0, nullptr);
 

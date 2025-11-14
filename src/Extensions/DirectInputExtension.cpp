@@ -14,9 +14,11 @@ constexpr const char* CAMERA_Y_NAME = "DIA_GAME_AXIS_Y";
 struct
 {
 	std::set<DWORD> ActionSemantic_CameraControl;
-	std::set<DWORD> ActionSemantic_CameraXY;
+	std::set<DWORD> ActionSemantic_CameraX;
+	std::set<DWORD> ActionSemantic_CameraY;
 
-	float Sensitivity = 0.0025f;
+	float MouseSensitivity = 0.2f;
+	float CarryMouseX = 0.f, CarryMouseY = 0.f;
 	bool ControlActionPressed = false;
 } GRuntime;
 
@@ -184,10 +186,20 @@ HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTD
 			GRuntime.ControlActionPressed = LOBYTE(ev.dwData) > 0;
 			LogDebug(TEXT("Control %s"), GRuntime.ControlActionPressed ? TEXT("pressed") : TEXT("released"));
 		}
-		else if (GRuntime.ControlActionPressed && GRuntime.ActionSemantic_CameraXY.contains(action.dwSemantic))
+		else if (GRuntime.ControlActionPressed)
 		{
-			const float scaledData = (float)ev.dwData * GRuntime.Sensitivity;
-			ev.dwData = 0; // TODO: IMPLEMENT
+			float* carryDelta = nullptr;
+			if (GRuntime.ActionSemantic_CameraX.contains(action.dwSemantic)) carryDelta = &GRuntime.CarryMouseX;
+			else if (GRuntime.ActionSemantic_CameraY.contains(action.dwSemantic)) carryDelta = &GRuntime.CarryMouseY;
+
+			if (carryDelta)
+			{
+				const float scaledDelta = (float)((LONG)ev.dwData) * GRuntime.MouseSensitivity + *carryDelta;
+				const LONG outDelta = std::lroundf(scaledDelta);
+
+				*carryDelta = scaledDelta - outDelta; // carry over what was rounded
+				ev.dwData = (DWORD)outDelta;
+			}
 		}
 	}
 
@@ -232,10 +244,13 @@ HRESULT CInputDevicePatched::BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPC
 			{
 				GRuntime.ActionSemantic_CameraControl.emplace(action.dwSemantic);
 			}
-			else if (SCString::Compare(action.lptszActionName, CAMERA_X_NAME) == 0 ||
-					 SCString::Compare(action.lptszActionName, CAMERA_Y_NAME) == 0)
+			else if (SCString::Compare(action.lptszActionName, CAMERA_X_NAME) == 0)
 			{
-				GRuntime.ActionSemantic_CameraXY.emplace(action.dwSemantic);
+				GRuntime.ActionSemantic_CameraX.emplace(action.dwSemantic);
+			}
+			else if (SCString::Compare(action.lptszActionName, CAMERA_Y_NAME) == 0)
+			{
+				GRuntime.ActionSemantic_CameraY.emplace(action.dwSemantic);
 			}
 		}
 	}

@@ -8,16 +8,18 @@
 #include "Program.h"
 
 constexpr const char* CAMERA_CONTROL_ACTION_NAME = "DIA_GAME_CAMERACONTROL";
-constexpr const char* CAMERA_X_NAME = "DIA_GAME_AXIS_X";
-constexpr const char* CAMERA_Y_NAME = "DIA_GAME_AXIS_Y";
+
+// Found by testing. TODO: Support for gamepad ?
+constexpr DWORD MOUSE_X_ID = 1;
+constexpr DWORD MOUSE_Y_ID = 257;
 
 static struct
 {
 	std::set<DWORD> ActionSemantic_CameraControl;
-	std::set<DWORD> ActionSemantic_CameraX;
-	std::set<DWORD> ActionSemantic_CameraY;
+	std::set<DWORD> ActionSemantic_MouseX;
+	std::set<DWORD> ActionSemantic_MouseY;
 
-	float MouseSensitivity = 0.2f;
+	float MouseSensitivity = 6.f;
 	float CarryMouseX = 0.f, CarryMouseY = 0.f;
 	bool ControlActionPressed = false;
 } GRuntime;
@@ -273,11 +275,12 @@ HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTD
 			GRuntime.ControlActionPressed = LOBYTE(ev.dwData) > 0;
 			LogDebug(TEXT("Control %s"), GRuntime.ControlActionPressed ? TEXT("pressed") : TEXT("released"));
 		}
-		else if (GRuntime.ControlActionPressed)
+
+		if (!GRuntime.ControlActionPressed)
 		{
 			float* carryDelta = nullptr;
-			if (GRuntime.ActionSemantic_CameraX.contains(action.dwSemantic)) carryDelta = &GRuntime.CarryMouseX;
-			else if (GRuntime.ActionSemantic_CameraY.contains(action.dwSemantic)) carryDelta = &GRuntime.CarryMouseY;
+			if (GRuntime.ActionSemantic_MouseX.contains(action.dwSemantic)) carryDelta = &GRuntime.CarryMouseX;
+			else if (GRuntime.ActionSemantic_MouseY.contains(action.dwSemantic)) carryDelta = &GRuntime.CarryMouseY;
 
 			if (carryDelta)
 			{
@@ -329,17 +332,17 @@ HRESULT CInputDevicePatched::BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPC
 		for (uint32 i = 0; i < lpActionFormat->dwNumActions; ++i)
 		{
 			const DIACTION& action = *(DIACTION*)((char*)lpActionFormat->rgoAction + (lpActionFormat->dwActionSize * i));
-			if (SCString::Compare(action.lptszActionName, CAMERA_CONTROL_ACTION_NAME) == 0)
+			if (action.dwObjID == MOUSE_X_ID)
+			{
+				GRuntime.ActionSemantic_MouseY.emplace(action.dwSemantic);
+			}
+			else if (action.dwObjID == MOUSE_Y_ID)
+			{
+				GRuntime.ActionSemantic_MouseX.emplace(action.dwSemantic);
+			}
+			else if (SCString::Compare(action.lptszActionName, CAMERA_CONTROL_ACTION_NAME) == 0)
 			{
 				GRuntime.ActionSemantic_CameraControl.emplace(action.dwSemantic);
-			}
-			else if (SCString::Compare(action.lptszActionName, CAMERA_X_NAME) == 0)
-			{
-				GRuntime.ActionSemantic_CameraX.emplace(action.dwSemantic);
-			}
-			else if (SCString::Compare(action.lptszActionName, CAMERA_Y_NAME) == 0)
-			{
-				GRuntime.ActionSemantic_CameraY.emplace(action.dwSemantic);
 			}
 		}
 	}
@@ -410,7 +413,7 @@ void CInputDevicePatched::PrintActiveActionMap() const
 			keyName = object.tszName;
 		}
 
-		LogInfo(TEXT("Name: %s, Key: %s"), action.lptszActionName, *keyName);
+		LogInfo(TEXT("ID: %d, Name: %s, Key: %s"), action.dwObjID, action.lptszActionName, *keyName);
 	}
 }
 
@@ -427,15 +430,15 @@ HRESULT CInputPatched::CreateDevice(REFGUID rguid, LPDIRECTINPUTDEVICE8* lplpDir
 {
 	LogDebug(TEXT("CInputDevicePatched::CreateDevice"));
 
-	TComPtr<CInputDevicePatched> devices = _devices.FindCopy(rguid);
-	if (!devices.IsValid())
+	const auto* foundDevice = _devices.Find(rguid);
+	if (!foundDevice || !foundDevice->IsValid())
 	{
 		LogWarning(TEXT("CInputPatched: Can't find '%s' device"), *ToString(rguid));
 		return S_FALSE;
 	}
 
-	*lplpDirectInputDevice = devices.Get();
-	devices->AddRef(); // since we are exposing, we need to add ref
+	*lplpDirectInputDevice = foundDevice->Get();
+	(*foundDevice)->AddRef(); // since we are exposing, we need to add ref
 	return S_OK;
 }
 
@@ -461,7 +464,7 @@ HRESULT CInputPatched::EnumDevicesBySemantics(LPCSTR pszUserName, LPDIACTIONFORM
 	for (int32 dI = 0; dI < _devices.GetNum(); ++dI)
 	{
 		const TComPtr<CInputDevicePatched>& device = _devices.GetByIndex(dI);
-		const uint16 remaining = (_devices.GetNum() - 1) - dI;
+		const int32 remaining = (_devices.GetNum() - 1) - dI;
 
 		bool success = false;
 		for (int32 aI = 0; aI < lpActionFormat->dwNumActions; ++aI)
@@ -479,7 +482,7 @@ HRESULT CInputPatched::EnumDevicesBySemantics(LPCSTR pszUserName, LPDIACTIONFORM
 			break;
 		}
 
-		if (success && lpCallback(&device->GetInfo(), device.Get(), DIEDBS_RECENTDEVICE, remaining, pvRef) == DIENUM_STOP)
+		if (success && lpCallback(&device->GetInfo(), device.Get(), 0, remaining, pvRef) == DIENUM_STOP)
 		{
 			break;
 		}
@@ -560,5 +563,10 @@ void CDirectInputExtension::Tick(double deltaTime)
 void CDirectInputExtension::Shutdown()
 {
 	CHECK(MH_RemoveHook(_createInputHook) == MH_OK);
+
+	_inputModuleHandle = nullptr; // do not release/close
+	_createInputHook = nullptr;
+	_input.Reset();
+
 	Super::Shutdown();
 }

@@ -11,7 +11,7 @@ constexpr const char* CAMERA_CONTROL_ACTION_NAME = "DIA_GAME_CAMERACONTROL";
 constexpr const char* CAMERA_X_NAME = "DIA_GAME_AXIS_X";
 constexpr const char* CAMERA_Y_NAME = "DIA_GAME_AXIS_Y";
 
-struct
+static struct
 {
 	std::set<DWORD> ActionSemantic_CameraControl;
 	std::set<DWORD> ActionSemantic_CameraX;
@@ -22,7 +22,93 @@ struct
 	bool ControlActionPressed = false;
 } GRuntime;
 
-BOOL CALLBACK HandleEnumDevices(LPCDIDEVICEINSTANCE pdidInstance, void* pvRef)
+// Checks if a given device object matches a semantic
+// Returns TRUE if it matches, FALSE otherwise
+bool DoesObjectMatchSemantic(
+	DWORD semantic,                  // dwSemantic from DIACTION
+	const DIDEVICEINSTANCE* instance,
+	const DIDEVICEOBJECTINSTANCE* object,
+	bool exact = true                // optional strictness
+)
+{
+	// Extract low 8 bits for value/index
+	DWORD value = semantic & 0xFF;
+
+	// Extract axis info (bits 15-18)
+	DWORD axis = (semantic >> 15) & 0xF;
+
+	// Determine the expected type (DIDFT_*) from semantic
+	DWORD expectedType = 0;
+	switch (semantic & 0x700)      // semantic type mask
+	{
+		case 0x200: expectedType = DIDFT_ABSAXIS; break;
+		case 0x300: expectedType = DIDFT_RELAXIS; break;
+		case 0x400: expectedType = DIDFT_BUTTON; break;
+		case 0x600: expectedType = DIDFT_POV; break;
+		default: return false;       // unknown/unsupported type
+	}
+
+	// Check if the object's type matches the expected type
+	if (!(DIDFT_GETTYPE(object->dwType) & expectedType))
+		return false;
+
+	// High 8 bits of semantic encode device class / special handling
+	DWORD deviceCategory = semantic & 0xFF000000;
+
+	switch (deviceCategory)
+	{
+		case 0x81000000: // Keyboard-specific semantic
+			return ((instance->dwDevType & 0xF) == DI8DEVTYPE_KEYBOARD) &&
+				   (object->dwOfs == value);
+
+		case 0x82000000: // Mouse-specific semantic
+			return ((instance->dwDevType & 0xF) == DI8DEVTYPE_MOUSE) &&
+				   (object->dwOfs == value);
+
+		case 0x83000000: // Not supported / ignored semantic
+			return false;
+
+		default:
+			// Filter out keyboard/mouse if already handled
+			if ((instance->dwDevType & 0xF) == DI8DEVTYPE_KEYBOARD) return false;
+			if ((instance->dwDevType & 0xF) == DI8DEVTYPE_MOUSE)    return false;
+
+			// fallthrough for general semantic
+		case 0xFF000000:
+			// Axis index must match if specified
+			if (axis && (axis - 1) != DIDFT_GETINSTANCE(object->dwType))
+				return false;
+
+			// Optional: strict value check
+			return !exact || !value || (value == DIDFT_GETINSTANCE(object->dwType) + 1);
+	}
+}
+
+struct SFindDeviceObjectBySematicsParam
+{
+	const DIACTION* Action = nullptr;
+	const DIDEVICEINSTANCE* Device = nullptr;
+	LPCDIDEVICEOBJECTINSTANCE OutObject = nullptr;
+};
+
+BOOL CALLBACK FindDeviceObjectBySemantics(LPCDIDEVICEOBJECTINSTANCE obj, VOID* pvRef)
+{
+	SFindDeviceObjectBySematicsParam& param = *(SFindDeviceObjectBySematicsParam*)pvRef;
+
+	// deviceMask = HIWORD(dwSemantic)
+	// actionIndex = HIBYTE(dwSemantic)
+	// actionCode = LOBYTE(dwSemantic)
+
+	if (DoesObjectMatchSemantic(param.Action->dwSemantic, param.Device, obj, false))
+	{
+		param.OutObject = obj;
+		return DIENUM_STOP;
+	}
+
+	return DIENUM_CONTINUE;
+}
+
+BOOL CALLBACK HandleEnumDevices(LPCDIDEVICEINSTANCE pdidInstance, VOID* pvRef)
 {
 	if (!pdidInstance) return DIENUM_CONTINUE;
 
@@ -138,7 +224,8 @@ CInputDevicePatched::CInputDevicePatched(IDirectInputDevice8A* impl, const DIDEV
 	, _idAsStr(ToString(data.guidInstance))
 	, _typeAsStr(ToString(_type))
 	, _info(data)
-{}
+{
+}
 
 HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags)
 {
@@ -208,6 +295,8 @@ HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTD
 
 HRESULT CInputDevicePatched::BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
 {
+	LogDebug(TEXT("CInputDevicePatched::BuildActionMap"));
+
 	SInputDeviceMap& mapFormat = _actionMaps.FindOrAdd(lpActionFormat->tszActionMap);
 	if (mapFormat.IsValid())
 	{
@@ -260,6 +349,8 @@ HRESULT CInputDevicePatched::BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPC
 
 HRESULT CInputDevicePatched::SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
 {
+	LogDebug(TEXT("CInputDevicePatched::SetActionMap"));
+
 	if (!(dwFlags & DIDSAM_FORCESAVE) && _activeActionMapId.compare(lpActionFormat->tszActionMap) == 0)
 	{
 		return S_OK;
@@ -334,6 +425,8 @@ CInputPatched::CInputPatched(IDirectInput8A* impl)
 
 HRESULT CInputPatched::CreateDevice(REFGUID rguid, LPDIRECTINPUTDEVICE8* lplpDirectInputDevice, LPUNKNOWN pUnkOuter)
 {
+	LogDebug(TEXT("CInputDevicePatched::CreateDevice"));
+
 	TComPtr<CInputDevicePatched> devices = _devices.FindCopy(rguid);
 	if (!devices.IsValid())
 	{
@@ -348,6 +441,8 @@ HRESULT CInputPatched::CreateDevice(REFGUID rguid, LPDIRECTINPUTDEVICE8* lplpDir
 
 HRESULT CInputPatched::EnumDevices(DWORD dwDevType, LPDIENUMDEVICESCALLBACK lpCallback, LPVOID pvRef, DWORD dwFlags)
 {
+	LogDebug(TEXT("CInputDevicePatched::EnumDevices"));
+
 	for (const TComPtr<CInputDevicePatched>& device : _devices.GetValues())
 	{
 		const BOOL result = lpCallback(&device->GetInfo(), pvRef);
@@ -359,13 +454,35 @@ HRESULT CInputPatched::EnumDevices(DWORD dwDevType, LPDIENUMDEVICESCALLBACK lpCa
 
 HRESULT CInputPatched::EnumDevicesBySemantics(LPCSTR pszUserName, LPDIACTIONFORMAT lpActionFormat, LPDIENUMDEVICESBYSEMANTICSCB lpCallback, LPVOID pvRef, DWORD dwFlags)
 {
-	for (uint16 i = 0; i < _devices.GetNum(); ++i)
-	{
-		const auto& device = _devices.GetByIndex(i);
-		const uint16 remaining = (_devices.GetNum() - 1) - i;
+	LogDebug(TEXT("CInputDevicePatched::EnumDevicesBySemantics"));
 
-		const BOOL result = lpCallback(&device->GetInfo(), device.Get(), DIEDBS_RECENTDEVICE, remaining, pvRef);
-		if (result == DIENUM_STOP) break;
+	if (!lpActionFormat || lpActionFormat->dwNumActions == 0) return DIERR_INVALIDPARAM;
+
+	for (int32 dI = 0; dI < _devices.GetNum(); ++dI)
+	{
+		const TComPtr<CInputDevicePatched>& device = _devices.GetByIndex(dI);
+		const uint16 remaining = (_devices.GetNum() - 1) - dI;
+
+		bool success = false;
+		for (int32 aI = 0; aI < lpActionFormat->dwNumActions; ++aI)
+		{
+			SFindDeviceObjectBySematicsParam fParams =
+			{
+				.Action = (DIACTION*)((char*)lpActionFormat->rgoAction + (lpActionFormat->dwActionSize * aI)),
+				.Device = &device->GetInfo()
+			};
+
+			if (FAILED(device->EnumObjects(FindDeviceObjectBySemantics, &fParams, dwFlags))) break; // NO NEED TO CHECK DEVICE MORE
+			else if (!fParams.OutObject) continue;
+
+			success = true;
+			break;
+		}
+
+		if (success && lpCallback(&device->GetInfo(), device.Get(), DIEDBS_RECENTDEVICE, remaining, pvRef) == DIENUM_STOP)
+		{
+			break;
+		}
 	}
 
 	return S_OK;

@@ -128,7 +128,6 @@ public:
 	FORCEINLINE const TFastMap<std::string, SInputDeviceMap>& GetActionMaps() const { return _actionMaps; }
 
 	FORCEINLINE const GUID& GetId() const { return _info.guidInstance; }
-	FORCEINLINE const SString& GetIdString() const { return _idAsStr; }
 	FORCEINLINE const DIDEVICEINSTANCE& GetInfo() const { return _info; }
 
 	STDOVERRIDEMETHODIMP GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags);
@@ -140,7 +139,6 @@ public:
 private:
 	EInputDeviceType _type = EInputDeviceType::None;
 
-	SString _idAsStr;
 	SString _typeAsStr;
 
 	DIDEVICEINSTANCE _info;

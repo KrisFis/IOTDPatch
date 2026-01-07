@@ -223,7 +223,6 @@ void SInputDeviceMap::Reset(const DIACTIONFORMAT& data)
 CInputDevicePatched::CInputDevicePatched(IDirectInputDevice8A* impl, const DIDEVICEINSTANCE& data)
 	: Super(impl)
 	, _type((EInputDeviceType)LOBYTE(data.dwDevType))
-	, _idAsStr(ToString(data.guidInstance))
 	, _typeAsStr(ToString(_type))
 	, _info(data)
 {
@@ -240,9 +239,8 @@ HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTD
 	const SInputDeviceMap* activeMap = _actionMaps.Find(_activeActionMapId);
 	if (!activeMap)
 	{
-		LogWarning(TEXT("CInputDevicePatched%s %s: Active map '%s' not found"),
+		LogWarning(TEXT("CInputDevicePatched%s: Active map '%s' not found"),
 			*_typeAsStr,
-			BUILD_DEBUG ? *_idAsStr : "",
 			_activeActionMapId.c_str()
 		);
 		return result;
@@ -258,9 +256,8 @@ HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTD
 
 		if (!LIKELY(_actionStates.IsValidIndex(actionIdx)))
 		{
-			LogWarning(TEXT("CInputDevicePatched%s %s: Invalid action index '%lu' encountered"),
+			LogWarning(TEXT("CInputDevicePatched%s: Invalid action index '%lu' encountered"),
 				*_typeAsStr,
-				BUILD_DEBUG ? *_idAsStr : "",
 				ev.dwOfs
 			);
 			continue;
@@ -310,9 +307,8 @@ HRESULT CInputDevicePatched::BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPC
 	const HRESULT result = CDirectInputDevice8Proxy::BuildActionMap(lpActionFormat, lpszUserName, dwFlags);
 	if (FAILED(result))
 	{
-		LogWarning(TEXT("CInputDevicePatched%s %s: Map '%s' build failed for '%s'"),
+		LogWarning(TEXT("CInputDevicePatched%s: Map '%s' build failed for '%s'"),
 			*_typeAsStr,
-			BUILD_DEBUG ? *_idAsStr : "",
 			lpActionFormat->tszActionMap,
 			lpszUserName
 		);
@@ -320,9 +316,8 @@ HRESULT CInputDevicePatched::BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPC
 	}
 
 	mapFormat = *lpActionFormat;
-	LogInfo(TEXT("CInputDevicePatched%s %s: Map '%s' built for '%s'"),
+	LogInfo(TEXT("CInputDevicePatched%s: Map '%s' built for '%s'"),
 		*_typeAsStr,
-		BUILD_DEBUG ? *_idAsStr : "",
 		lpActionFormat->tszActionMap,
 		lpszUserName
 	);
@@ -362,9 +357,8 @@ HRESULT CInputDevicePatched::SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCST
 	const HRESULT result = CDirectInputDevice8Proxy::SetActionMap(lpActionFormat, lpszUserName, dwFlags);
 	if (FAILED(result))
 	{
-		LogWarning(TEXT("CInputDevicePatched%s %s: Map '%s' application failed for '%s'"), 
+		LogWarning(TEXT("CInputDevicePatched%s: Map '%s' application failed for '%s'"), 
 			*_typeAsStr,
-			BUILD_DEBUG ? *_idAsStr : "",
 			lpActionFormat->tszActionMap,
 			lpszUserName
 		);
@@ -372,9 +366,8 @@ HRESULT CInputDevicePatched::SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCST
 	}
 
 	_activeActionMapId = lpActionFormat->tszActionMap;
-	LogInfo(TEXT("CInputDevicePatched%s %s: Map '%s' applied for '%s'"), 
+	LogInfo(TEXT("CInputDevicePatched%s: Map '%s' applied for '%s'"), 
 		*_typeAsStr,
-		BUILD_DEBUG ? *_idAsStr : "",
 		lpActionFormat->tszActionMap,
 		lpszUserName
 	);

@@ -1,22 +1,58 @@
-## IOTDPatch
+# IOTDPatch
 
-This project is a patch for "The I of the dragon" game, aimed at improving performance and user experience. The patch addresses the following issues:
+A patch for *The I of the Dragon* aimed at improving performance and user experience, implemented via DLL injection.
 
-1) Improves loading times when opening any UI, reducing the time from approximately 10 seconds to less than half a second.
-2) Changes sensitivity when in camera rotation mode in comparison to auto-follow mode.
+## Features
 
-The patch is implemented through DLL injection, achieved by reverse engineering the game's code and patching the InputSystem. The game uses DirectInput and dimap, which are intercepted and patched by the DLL.
+- **Faster UI loading** — Reduces load time when opening any UI from ~10 seconds to under half a second.
+- **Improved camera sensitivity** — Separates sensitivity settings for camera rotation mode vs. auto-follow mode.
 
-Please note that there are known issues with this patch:
+## How It Works
 
-1) When the patch is enabled, the keybind option UI may not properly show all inputs, although you can update them (or just update them without the patch).
-2) Rotation sensitivity is not exposed in the game's UI, as it cannot be added by the patch.
+The patch is implemented through DLL injection. It works by reverse engineering the game's code and patching the `InputSystem`. The game uses DirectInput and dimap, which are intercepted and patched by the injected DLL.
 
-The project is written in pure C++ and uses CMake for build. It relies on the following libraries:
+## Installation
 
-- Minhook: A library for hooking and patching code.
-- ASTD: The project's standard library, which is also written by the author.
+The DLL must be injected as the **first DLL** when the game starts. The recommended approach is to start the game in a suspended state, inject the DLL, then resume. You can use the author's [DLLInjector](https://github.com/KrisFis/DLLInjector) to do this easily.
 
-To use this patch, the DLL needs to be injected as the first DLL. The best way to do this is to start the game in a suspended state, inject the DLL, and then resume or use a launcher that includes this functionality.
+> A dedicated launcher UI or integration of the injector into this repo may be added in the future.
 
-If you need assistance with any aspect of this project, please feel free to ask.
+## Configuration
+
+Place `IOTDPatch.ini` in the same directory as the DLL. The file will be created with defaults on first run if not present.
+
+```ini
+[Input]
+; Sensitivity when in "control mode" (rotating camera around the dragon)
+ControlSensitivity=0.16
+
+[Debugging]
+; Spawns a console window with a real-time log from the DLL
+EnableConsole=TRUE
+; Writes all logs to IOTDPatch.log
+EnableLogFile=TRUE
+; Minimum logging level: Error > Warning > Info > Verbose > VeryVerbose
+MinimalLogVerbosity=VeryVerbose
+```
+
+## Known Issues
+
+- **Keybind UI** — When the patch is enabled, the keybind options UI may not display all inputs correctly. You can still update bindings through the UI (or do so before enabling the patch).
+- **Rotation sensitivity** — The `ControlSensitivity` setting cannot be exposed through the game's native UI and must be configured via the INI file.
+
+## Building
+
+The project is written in pure C++ and uses CMake.
+
+**Dependencies:**
+- [MinHook](https://github.com/TsudaKageyu/minhook) — Hook and patching library
+- [ASTD](https://github.com/your-username/astd) — Author's personal standard library
+
+```bash
+cmake -B build
+cmake --build build
+```
+
+## License
+
+See [LICENSE](LICENSE) for details.

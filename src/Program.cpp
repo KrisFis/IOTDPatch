@@ -5,6 +5,7 @@
 #include <chrono>
 #include <thread>
 
+#include "Config.h"
 #include "MinHook.h"
 #include "ProgramExtension.h"
 
@@ -164,12 +165,29 @@ namespace NProgram
 		return GDLLHandle;
 	}
 
+	std::string GetInjectedDirectory()
+	{
+		static std::string dir;
+		if (dir.empty())
+		{
+			char path[MAX_PATH];
+			GetModuleFileNameA(GDLLHandle, path, MAX_PATH);
+
+			std::string fullPath(path);
+			dir = fullPath.substr(0, fullPath.find_last_of('\\'));
+		}
+
+		return dir;
+	}
+
 	void WaitForDebugger()
 	{
+#if BUILD_DEBUG
 		while (!IsDebuggerPresent())
 		{
 			Sleep(100);
 		}
+#endif
 	}
 	
 	bool IsShutdownRequested()

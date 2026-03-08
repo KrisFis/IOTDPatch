@@ -57,5 +57,5 @@ namespace _NProgram::Extensions																			\
 			return staticObj;																			\
 		}																								\
 	};																									\
-	static TGet<ClassType> ##ClassType##_Default = {};													\
+	static TGet<ClassType> ClassType##_Default = {};													\
 }

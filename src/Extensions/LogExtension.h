@@ -9,7 +9,7 @@
 class CLogExtension : public IProgramExtension
 {
 public:
-	static constexpr const tchar* LOG_FILENAME = TEXT("IOTDPatched.log"); 
+	static constexpr const tchar* LOG_FILENAME = TEXT("IOTDPatch.log");
 
 	typedef IProgramExtension Super;
 

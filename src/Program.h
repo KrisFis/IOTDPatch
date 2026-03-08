@@ -7,26 +7,6 @@
 
 #include <iostream>
 
-template<typename Fmt, typename... ArgsT>
-FORCEINLINE void LogDebug(Fmt&& fmt, ArgsT&&... args)
-{
-#if BUILD_DEBUG
-	std::cout << "DEBUG: " << *SString::Printf(fmt, Forward<ArgsT>(args)...) << std::endl;
-#endif
-}
-
-template<typename Fmt, typename... ArgsT>
-FORCEINLINE void LogInfo(Fmt&& fmt, ArgsT&&... args)
-{
-	std::cout << *SString::Printf(fmt, Forward<ArgsT>(args)...) << std::endl;
-}
-
-template<typename Fmt, typename... ArgsT>
-FORCEINLINE void LogWarning(Fmt&& fmt, ArgsT&&... args)
-{
-	std::cout << "WARNING: " << *SString::Printf(fmt, Forward<ArgsT>(args)...) << std::endl;
-}
-
 std::string ToUTF8(const wchar_t* wstr);
 std::wstring ToWChar(const char* str);
 
@@ -43,6 +23,8 @@ namespace NProgram
 {
 	HMODULE GetEXEHandle();
 	HMODULE GetDLLHandle();
+
+	std::string GetInjectedDirectory();
 
 	void WaitForDebugger();
 

@@ -4,6 +4,8 @@
 
 #include <set>
 
+#include "Config.h"
+#include "Log.h"
 #include "MinHook.h"
 #include "Program.h"
 
@@ -19,8 +21,8 @@ static struct
 	std::set<DWORD> ActionSemantic_MouseX;
 	std::set<DWORD> ActionSemantic_MouseY;
 
-	float MouseSensitivity = 6.f;
-	float CarryMouseX = 0.f, CarryMouseY = 0.f;
+	float ControlXYSensitivity = 1.f;
+	float CarryControlX = 0.f, CarryControlY = 0.f;
 	bool ControlActionPressed = false;
 } GRuntime;
 
@@ -127,7 +129,7 @@ BOOL CALLBACK HandleEnumDevices(LPCDIDEVICEINSTANCE pdidInstance, VOID* pvRef)
 		case EInputDeviceType::Gamepad:
 			break;
 		default:
-			LogDebug(TEXT("CInputPatched: Skipped creation of '%s' device '%s'"), *typeAsStr, *idAsStr);
+			LOGF(VeryVerbose, TEXT("CInputPatched: Skipped creation of '%s' device '%s'"), *typeAsStr, *idAsStr);
 			return DIENUM_CONTINUE;
 	}
 
@@ -141,7 +143,7 @@ BOOL CALLBACK HandleEnumDevices(LPCDIDEVICEINSTANCE pdidInstance, VOID* pvRef)
 			newDevice->Release();
 		}
 
-		LogWarning(TEXT("CInputPatched: Failed to create '%s' device '%s'"), *typeAsStr, *idAsStr);
+		LOGF(Error, TEXT("CInputPatched: Failed to create '%s' device '%s'"), *typeAsStr, *idAsStr);
 		return DIENUM_CONTINUE;
 	}
 
@@ -151,7 +153,7 @@ BOOL CALLBACK HandleEnumDevices(LPCDIDEVICEINSTANCE pdidInstance, VOID* pvRef)
 		return DIENUM_CONTINUE;
 	}
 
-	LogInfo(TEXT("CInputPatched: Created new '%s' device '%s'"), *typeAsStr, *idAsStr);
+	LOGF(Info, TEXT("CInputPatched: Created new '%s' device '%s'"), *typeAsStr, *idAsStr);
 	device.Reset(new CInputDevicePatched(newDevice, *pdidInstance), true);
 
 	return DIENUM_CONTINUE;
@@ -162,7 +164,7 @@ HRESULT WINAPI HandleDirectInput8Create(HINSTANCE hinst, DWORD dwVersion, REFIID
 	const CDirectInputExtension* ext = NProgram::Extensions::Get<CDirectInputExtension>();
 	if (!ext->GetInput().IsValid())
 	{
-		LogWarning(TEXT("CInputPatched: Can't find input"));
+		LOG(Error, TEXT("CInputPatched: Can't find input"));
 		return S_FALSE;
 	}
 
@@ -239,7 +241,7 @@ HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTD
 	const SInputDeviceMap* activeMap = _actionMaps.Find(_activeActionMapId);
 	if (!activeMap)
 	{
-		LogWarning(TEXT("CInputDevicePatched%s: Active map '%s' not found"),
+		LOGF(Error, TEXT("CInputDevicePatched%s: Active map '%s' not found"),
 			*_typeAsStr,
 			_activeActionMapId.c_str()
 		);
@@ -256,7 +258,7 @@ HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTD
 
 		if (!LIKELY(_actionStates.IsValidIndex(actionIdx)))
 		{
-			LogWarning(TEXT("CInputDevicePatched%s: Invalid action index '%lu' encountered"),
+			LOGF(Error, TEXT("CInputDevicePatched%s: Invalid action index '%lu' encountered"),
 				*_typeAsStr,
 				ev.dwOfs
 			);
@@ -270,18 +272,18 @@ HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTD
 		if (GRuntime.ActionSemantic_CameraControl.contains(action.dwSemantic))
 		{
 			GRuntime.ControlActionPressed = LOBYTE(ev.dwData) > 0;
-			LogDebug(TEXT("Control %s"), GRuntime.ControlActionPressed ? TEXT("pressed") : TEXT("released"));
+			LOGF(VeryVerbose, TEXT("Control %s"), GRuntime.ControlActionPressed ? TEXT("pressed") : TEXT("released"));
 		}
 
-		if (!GRuntime.ControlActionPressed)
+		if (GRuntime.ControlActionPressed)
 		{
 			float* carryDelta = nullptr;
-			if (GRuntime.ActionSemantic_MouseX.contains(action.dwSemantic)) carryDelta = &GRuntime.CarryMouseX;
-			else if (GRuntime.ActionSemantic_MouseY.contains(action.dwSemantic)) carryDelta = &GRuntime.CarryMouseY;
+			if (GRuntime.ActionSemantic_MouseX.contains(action.dwSemantic)) carryDelta = &GRuntime.CarryControlX;
+			else if (GRuntime.ActionSemantic_MouseY.contains(action.dwSemantic)) carryDelta = &GRuntime.CarryControlY;
 
 			if (carryDelta)
 			{
-				const float scaledDelta = (float)((LONG)ev.dwData) * GRuntime.MouseSensitivity + *carryDelta;
+				const float scaledDelta = (float)((LONG)ev.dwData) * GRuntime.ControlXYSensitivity + *carryDelta;
 				const LONG outDelta = std::lroundf(scaledDelta);
 
 				*carryDelta = scaledDelta - outDelta; // carry over what was rounded
@@ -295,7 +297,7 @@ HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTD
 
 HRESULT CInputDevicePatched::BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
 {
-	LogDebug(TEXT("CInputDevicePatched::BuildActionMap"));
+	LOG(VeryVerbose, TEXT("CInputDevicePatched::BuildActionMap"));
 
 	SInputDeviceMap& mapFormat = _actionMaps.FindOrAdd(lpActionFormat->tszActionMap);
 	if (mapFormat.IsValid())
@@ -307,7 +309,7 @@ HRESULT CInputDevicePatched::BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPC
 	const HRESULT result = CDirectInputDevice8Proxy::BuildActionMap(lpActionFormat, lpszUserName, dwFlags);
 	if (FAILED(result))
 	{
-		LogWarning(TEXT("CInputDevicePatched%s: Map '%s' build failed for '%s'"),
+		LOGF(Error, TEXT("CInputDevicePatched%s: Map '%s' build failed for '%s'"),
 			*_typeAsStr,
 			lpActionFormat->tszActionMap,
 			lpszUserName
@@ -316,7 +318,7 @@ HRESULT CInputDevicePatched::BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPC
 	}
 
 	mapFormat = *lpActionFormat;
-	LogInfo(TEXT("CInputDevicePatched%s: Map '%s' built for '%s'"),
+	LOGF(Info, TEXT("CInputDevicePatched%s: Map '%s' built for '%s'"),
 		*_typeAsStr,
 		lpActionFormat->tszActionMap,
 		lpszUserName
@@ -347,7 +349,7 @@ HRESULT CInputDevicePatched::BuildActionMap(LPDIACTIONFORMAT lpActionFormat, LPC
 
 HRESULT CInputDevicePatched::SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCSTR lpszUserName, DWORD dwFlags)
 {
-	LogDebug(TEXT("CInputDevicePatched::SetActionMap"));
+	LOG(VeryVerbose, TEXT("CInputDevicePatched::SetActionMap"));
 
 	if (!(dwFlags & DIDSAM_FORCESAVE) && _activeActionMapId.compare(lpActionFormat->tszActionMap) == 0)
 	{
@@ -357,7 +359,7 @@ HRESULT CInputDevicePatched::SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCST
 	const HRESULT result = CDirectInputDevice8Proxy::SetActionMap(lpActionFormat, lpszUserName, dwFlags);
 	if (FAILED(result))
 	{
-		LogWarning(TEXT("CInputDevicePatched%s: Map '%s' application failed for '%s'"), 
+		LOGF(Error, TEXT("CInputDevicePatched%s: Map '%s' application failed for '%s'"),
 			*_typeAsStr,
 			lpActionFormat->tszActionMap,
 			lpszUserName
@@ -366,7 +368,7 @@ HRESULT CInputDevicePatched::SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCST
 	}
 
 	_activeActionMapId = lpActionFormat->tszActionMap;
-	LogInfo(TEXT("CInputDevicePatched%s: Map '%s' applied for '%s'"), 
+	LOGF(Info, TEXT("CInputDevicePatched%s: Map '%s' applied for '%s'"),
 		*_typeAsStr,
 		lpActionFormat->tszActionMap,
 		lpszUserName
@@ -378,6 +380,7 @@ HRESULT CInputDevicePatched::SetActionMap(LPDIACTIONFORMAT lpActionFormat, LPCST
 		_actionStates.AddDefaulted(lpActionFormat->dwNumActions);
 	}
 
+	if (LogVerbosityEnabled(ELogVerbosity::VeryVerbose)) PrintActiveActionMap();
 	return result;
 }
 
@@ -386,7 +389,7 @@ void CInputDevicePatched::PrintActiveActionMap() const
 	const auto* foundMap = _actionMaps.Find(_activeActionMapId);
 	if (!foundMap) return;
 
-	LogInfo(TEXT("--------------- %s (%s) ---------------"),
+	LOGF(VeryVerbose, TEXT("--------------- %s (%s) ---------------"),
 		_activeActionMapId.c_str(),
 		*_typeAsStr
 	);
@@ -406,7 +409,7 @@ void CInputDevicePatched::PrintActiveActionMap() const
 			keyName = object.tszName;
 		}
 
-		LogInfo(TEXT("ID: %d, Name: %s, Key: %s"), action.dwObjID, action.lptszActionName, *keyName);
+		LOGF(VeryVerbose, TEXT("ID: %d, Name: %s, Key: %s"), action.dwObjID, action.lptszActionName, *keyName);
 	}
 }
 
@@ -415,18 +418,18 @@ CInputPatched::CInputPatched(IDirectInput8A* impl)
 {
 	if (!CHECK(SUCCEEDED(impl->EnumDevices(DI8DEVCLASS_ALL, HandleEnumDevices, this, DIEDFL_ATTACHEDONLY))))
 	{
-		LogWarning(TEXT("CInputPatched: Could not fetch devices !"));
+		LOG(Error, TEXT("CInputPatched: Could not fetch devices !"));
 	}
 }
 
 HRESULT CInputPatched::CreateDevice(REFGUID rguid, LPDIRECTINPUTDEVICE8* lplpDirectInputDevice, LPUNKNOWN pUnkOuter)
 {
-	LogDebug(TEXT("CInputDevicePatched::CreateDevice"));
+	LOG(VeryVerbose, TEXT("CInputDevicePatched::CreateDevice"));
 
 	const auto* foundDevice = _devices.Find(rguid);
 	if (!foundDevice || !foundDevice->IsValid())
 	{
-		LogWarning(TEXT("CInputPatched: Can't find '%s' device"), *ToString(rguid));
+		LOGF(Error, TEXT("CInputPatched: Can't find '%s' device"), *ToString(rguid));
 		return S_FALSE;
 	}
 
@@ -437,7 +440,7 @@ HRESULT CInputPatched::CreateDevice(REFGUID rguid, LPDIRECTINPUTDEVICE8* lplpDir
 
 HRESULT CInputPatched::EnumDevices(DWORD dwDevType, LPDIENUMDEVICESCALLBACK lpCallback, LPVOID pvRef, DWORD dwFlags)
 {
-	LogDebug(TEXT("CInputDevicePatched::EnumDevices"));
+	LOG(VeryVerbose, TEXT("CInputDevicePatched::EnumDevices"));
 
 	for (const TComPtr<CInputDevicePatched>& device : _devices.GetValues())
 	{
@@ -450,7 +453,7 @@ HRESULT CInputPatched::EnumDevices(DWORD dwDevType, LPDIENUMDEVICESCALLBACK lpCa
 
 HRESULT CInputPatched::EnumDevicesBySemantics(LPCSTR pszUserName, LPDIACTIONFORMAT lpActionFormat, LPDIENUMDEVICESBYSEMANTICSCB lpCallback, LPVOID pvRef, DWORD dwFlags)
 {
-	LogDebug(TEXT("CInputDevicePatched::EnumDevicesBySemantics"));
+	LOG(VeryVerbose, TEXT("CInputDevicePatched::EnumDevicesBySemantics"));
 
 	if (!lpActionFormat || lpActionFormat->dwNumActions == 0) return DIERR_INVALIDPARAM;
 
@@ -490,7 +493,7 @@ void CDirectInputExtension::PrintActiveActionMaps(const int32 deviceIdx) const
 
 	const auto& devicesMap = _input->GetDevices();
 
-	LogInfo(TEXT("--------------- BEGIN Print Active Action Map ---------------"));
+	LOG(VeryVerbose, TEXT("--------------- BEGIN Print Active Action Map ---------------"));
 
 	if (deviceIdx >= 0)
 	{
@@ -507,7 +510,7 @@ void CDirectInputExtension::PrintActiveActionMaps(const int32 deviceIdx) const
 		}
 	}
 
-	LogInfo(TEXT("--------------- END Print Active Action Map ---------------"));
+	LOG(VeryVerbose, TEXT("--------------- END Print Active Action Map ---------------"));
 }
 
 void CDirectInputExtension::Initialize()
@@ -532,6 +535,13 @@ void CDirectInputExtension::Initialize()
 		CHECK(MH_EnableHook(targetHook) == MH_OK))
 	{
 		_createInputHook = targetHook;
+	}
+
+	// Load control sensitivity
+	double sensitivity = 0.0;
+	if (NConfig::TryGetDouble(TEXT("Input"), TEXT("ControlSensitivity"), sensitivity))
+	{
+		GRuntime.ControlXYSensitivity = sensitivity;
 	}
 }
 

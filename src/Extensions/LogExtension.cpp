@@ -2,6 +2,7 @@
 
 #include "LogExtension.h"
 
+#include "Config.h"
 #include "Program.h"
 
 BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
@@ -24,20 +25,31 @@ void CLogExtension::Initialize()
 {
 	Super::Initialize();
 
-#if BUILD_DEBUG
-	if (AllocConsole() && freopen_s(&_conOut, "CONOUT$", "w", stdout) == 0)
+	bool allowConsole = false;
+	bool allowLogFile = false;
+
+	NConfig::TryGetBoolean(TEXT("Debugging"), TEXT("EnableConsole"), allowConsole);
+	NConfig::TryGetBoolean(TEXT("Debugging"), TEXT("EnableLogFile"), allowLogFile);
+
+	if (allowConsole)
 	{
-		//std::ios::sync_with_stdio(true);
-		_conBuf = std::cout.rdbuf();
+		if (AllocConsole() && freopen_s(&_conOut, "CONOUT$", "w", stdout) == 0)
+		{
+			//std::ios::sync_with_stdio(true);
+			_conBuf = std::cout.rdbuf();
 
-		SetConsoleCtrlHandler(CtrlHandler, TRUE);
+			SetConsoleCtrlHandler(CtrlHandler, TRUE);
+		}
 	}
-#endif
 
-	_logFile = std::ofstream(LOG_FILENAME, std::ios::out | std::ios::trunc);
+	if (allowLogFile)
+	{
+		const std::string logFile = NProgram::GetInjectedDirectory() + "/" + LOG_FILENAME;
+		_logFile = std::ofstream(logFile, std::ios::out | std::ios::trunc);
 
-	_dbuf = StreamDualBuf(_conBuf, _logFile.rdbuf());
-	_oldBuf = std::cout.rdbuf(&_dbuf);
+		_dbuf = StreamDualBuf(_conBuf, _logFile.rdbuf());
+		_oldBuf = std::cout.rdbuf(&_dbuf);
+	}
 }
 
 void CLogExtension::Shutdown()
@@ -54,7 +66,6 @@ void CLogExtension::Shutdown()
 		_logFile.close();
 	}
 
-#if BUILD_DEBUG
 	if (_conOut)
 	{
 		fclose(_conOut);
@@ -68,7 +79,6 @@ void CLogExtension::Shutdown()
 
 		_conBuf = nullptr;
 	}
-#endif
 
 	Super::Shutdown();
 }

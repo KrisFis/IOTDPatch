@@ -24,6 +24,8 @@ static struct
 	float ControlXYSensitivity = 1.f;
 	float CarryControlX = 0.f, CarryControlY = 0.f;
 	bool ControlActionPressed = false;
+
+	bool PatchControlXYSensitivity = false;
 } GRuntime;
 
 // Checks if a given device object matches a semantic
@@ -267,27 +269,29 @@ HRESULT CInputDevicePatched::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJECTD
 
 		_actionStates[actionIdx] = ev.dwData;
 
-		// FINALLY the patch for sensitivity
-		const DIACTION& action = activeMap->GetActions()[actionIdx];
-		if (GRuntime.ActionSemantic_CameraControl.contains(action.dwSemantic))
+		if (GRuntime.PatchControlXYSensitivity)
 		{
-			GRuntime.ControlActionPressed = LOBYTE(ev.dwData) > 0;
-			LOGF(VeryVerbose, TEXT("Control %s"), GRuntime.ControlActionPressed ? TEXT("pressed") : TEXT("released"));
-		}
-
-		if (GRuntime.ControlActionPressed)
-		{
-			float* carryDelta = nullptr;
-			if (GRuntime.ActionSemantic_MouseX.contains(action.dwSemantic)) carryDelta = &GRuntime.CarryControlX;
-			else if (GRuntime.ActionSemantic_MouseY.contains(action.dwSemantic)) carryDelta = &GRuntime.CarryControlY;
-
-			if (carryDelta)
+			const DIACTION& action = activeMap->GetActions()[actionIdx];
+			if (GRuntime.ActionSemantic_CameraControl.contains(action.dwSemantic))
 			{
-				const float scaledDelta = (float)((LONG)ev.dwData) * GRuntime.ControlXYSensitivity + *carryDelta;
-				const LONG outDelta = std::lroundf(scaledDelta);
+				GRuntime.ControlActionPressed = LOBYTE(ev.dwData) > 0;
+				LOGF(VeryVerbose, TEXT("Control %s"), GRuntime.ControlActionPressed ? TEXT("pressed") : TEXT("released"));
+			}
 
-				*carryDelta = scaledDelta - outDelta; // carry over what was rounded
-				ev.dwData = (DWORD)outDelta;
+			if (GRuntime.ControlActionPressed)
+			{
+				float* carryDelta = nullptr;
+				if (GRuntime.ActionSemantic_MouseX.contains(action.dwSemantic)) carryDelta = &GRuntime.CarryControlX;
+				else if (GRuntime.ActionSemantic_MouseY.contains(action.dwSemantic)) carryDelta = &GRuntime.CarryControlY;
+
+				if (carryDelta)
+				{
+					const float scaledDelta = (float)((LONG)ev.dwData) * GRuntime.ControlXYSensitivity + *carryDelta;
+					const LONG outDelta = std::lroundf(scaledDelta);
+
+					*carryDelta = scaledDelta - outDelta; // carry over what was rounded
+					ev.dwData = (DWORD)outDelta;
+				}
 			}
 		}
 	}
@@ -541,6 +545,8 @@ void CDirectInputExtension::Initialize()
 	double sensitivity = 0.0;
 	if (NConfig::TryGetDouble(TEXT("Input"), TEXT("ControlSensitivity"), sensitivity))
 	{
+		SMath::Clamp(sensitivity, 0.0, 2.0);
+		GRuntime.PatchControlXYSensitivity = SMath::Abs(GRuntime.ControlXYSensitivity - sensitivity) > SMALL_NUMBER;
 		GRuntime.ControlXYSensitivity = sensitivity;
 	}
 }

@@ -29,4 +29,4 @@ jobs:
           name: IOTDPatch-${{ matrix.architecture }}-${{ matrix.config }}
           path: |
             build/${{ matrix.config }}/IOTDPatch.dll
-            IOTDPatch.ini
+            build/${{ matrix.config }}/IOTDPatch.ini

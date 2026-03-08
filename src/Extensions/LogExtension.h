@@ -27,16 +27,16 @@ private:
 		StreamDualBuf(std::streambuf* a, std::streambuf* b) : sb1(a), sb2(b) {}
 
 	protected:
-		int overflow(int c) override {
+		int32 overflow(int32 c) override {
 			if (c == EOF) return 0;
 			if (sb1) sb1->sputc(c);
 			if (sb2) sb2->sputc(c);
 			return c;
 		}
 
-		int sync() override {
-			int r1 = sb1 ? sb1->pubsync() : 0;
-			int r2 = sb2 ? sb2->pubsync() : 0;
+		int32 sync() override {
+			int32 r1 = sb1 ? sb1->pubsync() : 0;
+			int32 r2 = sb2 ? sb2->pubsync() : 0;
 			return (r1 == 0 && r2 == 0) ? 0 : -1;
 		}
 

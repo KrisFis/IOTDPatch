@@ -13,7 +13,7 @@ std::string ToUTF8(const wchar_t* wstr)
 	if (!wstr || !*wstr)
 		return {};
 
-	int len = WideCharToMultiByte(
+	int32 len = WideCharToMultiByte(
 		CP_UTF8,
 		0, 
 		wstr,

@@ -2,7 +2,8 @@
 
 #pragma once
 
-#include "ASTD/ASTD.h"
+#include "ASTD/ASTDMinimal.h"
+#include "ASTD/String.h"
 
 #include <iostream>
 
@@ -29,8 +30,6 @@ FORCEINLINE void LogWarning(Fmt&& fmt, ArgsT&&... args)
 std::string ToUTF8(const wchar_t* wstr);
 std::wstring ToWChar(const char* str);
 
-void WaitForDebugger();
-
 FORCEINLINE std::string SStringToStd(const SString& str)
 {
 #if ASTD_USE_UNICODE
@@ -49,7 +48,6 @@ namespace NProgram
 
 	bool IsShutdownRequested();
 	void RequestShutdown(const SString& reason = SString::GetEmpty());
-
 }
 
 namespace _NProgram

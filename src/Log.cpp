@@ -5,6 +5,8 @@
 #include "Config.h"
 #include "ASTD/String.h"
 
+#include <iostream>
+
 ELogVerbosity GetMinLogVerbosity()
 {
 	static ELogVerbosity verbosity = ELogVerbosity::Error;

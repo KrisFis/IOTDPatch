@@ -4,6 +4,8 @@
 
 #include "ASTD/ASTDMinimal.h"
 
+#include <string>
+
 namespace NConfig
 {
 	constexpr const tchar* CONFIG_FILENAME = TEXT("IOTDPatch.ini");

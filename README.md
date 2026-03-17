@@ -4,8 +4,10 @@ A patch for *The I of the Dragon* aimed at improving performance and user experi
 
 ## Features
 
-- **Faster UI loading** — Reduces load time when opening any UI from ~10 seconds to under half a second.
+- **Faster UI loading** — Reduces load time when opening any UI from ~4 seconds to under quarter of a second.
 - **Improved camera sensitivity** — Separates sensitivity settings for camera rotation mode vs. auto-follow mode.
+
+![Loading comparison](LoadingComparison.gif)
 
 ## How It Works
 
